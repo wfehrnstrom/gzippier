@@ -73,6 +73,10 @@ extern int method;         /* compression method */
  * is done in window except for unlzw.
  */
 
+// Rip out SMALL_MEM. Redefine it to be something greater for current embedded system.
+// Good chance we want to align buffers on page size boundaries.
+// Look into aligning buffers on page size boundaries
+// if we don't already do this in gzip.
 #ifndef	INBUFSIZ
 #  ifdef SMALL_MEM
 #    define INBUFSIZ  0x2000  /* input buffer size */

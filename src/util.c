@@ -313,18 +313,19 @@ char *strlwr(s)
  * case sensitive, force the base name to lower case.
  */
 char *
-gzip_base_name (fname)
-    char *fname;
+gzip_base_name (filename)
+    char *filename;
 {
-    fname = last_component (fname);
-    if (casemap('A') == 'a') strlwr(fname);
-    return fname;
+    filename = last_component (filename);
+    if (casemap('A') == 'a') strlwr(filename);
+    return filename;
 }
 
 /* ========================================================================
  * Unlink a file, working around the unlink readonly bug (if present).
  */
-int xunlink (filename)
+int
+xunlink (filename)
      char *filename;
 {
   int r = unlink (filename);

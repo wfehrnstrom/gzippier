@@ -17,10 +17,12 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-ALL_RECURSIVE_TARGETS =
+SRC = src
+
+ALL_RECURSIVE_TARGETS = $(src)
 BUILT_SOURCES =
 
-SUBDIRS = lib doc . tests
+SUBDIRS = lib doc $(SRC) . tests
 AM_CPPFLAGS = -I$(top_srcdir)/lib
 AM_CFLAGS = $(WARN_CFLAGS) $(WERROR_CFLAGS)
 
@@ -50,14 +52,15 @@ noinst_HEADERS = gzip.h lzw.h
 bin_PROGRAMS = gzip
 bin_SCRIPTS = gunzip gzexe zcat zcmp zdiff \
   zegrep zfgrep zforce zgrep zless zmore znew
-gzip_SOURCES = \
-  bits.c deflate.c gzip.c inflate.c lzw.c \
-  trees.c unlzh.c unlzw.c unpack.c unzip.c util.c zip.c
-gzip_LDADD = libver.a lib/libgzip.a
-gzip_LDADD += $(LIB_CLOCK_GETTIME)
-if IBM_Z_DFLTCC
-gzip_SOURCES += dfltcc.c
-endif
+# gzip_SOURCES = \
+#   bits.c deflate.c gzip.c inflate.c lzw.c \
+#   trees.c unlzh.c unlzw.c unpack.c unzip.c util.c zip.c
+# gzip_LDADD = libver.a lib/libgzip.a
+# gzip_LDADD += $(LIB_CLOCK_GETTIME)
+
+# if IBM_Z_DFLTCC
+# gzip_SOURCES += dfltcc.c
+# endif
 
 BUILT_SOURCES += version.c
 version.c: Makefile
@@ -111,6 +114,9 @@ gen-ChangeLog:
 new_path = PATH=.$(PATH_SEPARATOR)$$PATH
 
 # A simple test, just of gzip -- more of a sanity check than anything else.
+# AM_V_GEN signals that the command should be printed out in silent mode.
+# AM_V_at signals that it should not be.
+
 FILES_TO_CHECK = $(bin_SCRIPTS) \
   $(top_srcdir)/ChangeLog $(top_srcdir)/configure $(top_srcdir)/gzip.c
 check-local: $(FILES_TO_CHECK) $(bin_PROGRAMS) gzip.doc.gz

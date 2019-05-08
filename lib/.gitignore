@@ -227,3 +227,6 @@
 /xsize.h
 /yesno.c
 /yesno.h
+/arg-nonnull.h
+/c++defs.h
+/warn-on-use.h

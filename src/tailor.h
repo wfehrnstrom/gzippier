@@ -97,9 +97,12 @@
 #  endif
 #endif
 
+// Handle this, if necessary in other places
+
 #if defined WIN32 || defined _WIN32
 #  define HAVE_SYS_UTIME_H
 #  define MAX_PATH_LEN  260
+// WE may have to worry about this. gnu library named setmode may handle this.
 #  define SET_BINARY_MODE(fd) setmode(fd, O_BINARY)
 #  define UNLINK_READONLY_BUG
 #  include <io.h>
@@ -199,6 +202,8 @@
 #  define SET_BINARY_MODE(fd)
 #endif
 
+
+// try to get rid of it.
 #ifndef FALLTHROUGH
 # if __GNUC__ < 7
 #  define FALLTHROUGH ((void) 0)

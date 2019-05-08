@@ -20,11 +20,9 @@
 # 02111-1307, USA.
 
 AC_PREREQ([2.63])
-AC_INIT([gzip],
-        m4_esyscmd([build-aux/git-version-gen .tarball-version]),
-        [bug-gzip@gnu.org])
+AC_INIT([gzip],[m4_esyscmd(build-aux/git-version-gen .tarball-version)],[bug-gzip@gnu.org])
 
-AC_CONFIG_SRCDIR([gzip.c])
+AC_CONFIG_SRCDIR([src/gzip.c])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([lib/config.h:lib/config.hin])
@@ -210,9 +208,8 @@ AC_SUBST([ASCPPPOST])
 
 AC_CACHE_CHECK([for underline in external names], [gzip_cv_underline],
   [gzip_cv_underline=yes
-   AC_TRY_COMPILE([int foo() {return 0;}], [],
-     [$NM conftest.$OBJEXT | grep _foo >/dev/null 2>&1 ||
-        gzip_cv_underline=no])])
+   AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[int foo() {return 0;}]], [[]])],[$NM conftest.$OBJEXT | grep _foo >/dev/null 2>&1 ||
+        gzip_cv_underline=no],[])])
 ASCPPFLAGS=
 if test $gzip_cv_underline = no; then
   ASCPPFLAGS='-DNO_UNDERLINE'
@@ -260,13 +257,24 @@ else
 fi
 AC_SUBST([ASFLAGS_config])
 
-AC_ISC_POSIX
+AC_SEARCH_LIBS([strerror],[cposix])
 AC_C_CONST
 AC_HEADER_STDC
 AC_CHECK_HEADERS_ONCE(fcntl.h limits.h memory.h time.h)
 AC_CHECK_FUNCS_ONCE([chown fchmod fchown lstat siginterrupt])
 AC_HEADER_DIRENT
-AC_TYPE_SIGNAL
+AC_DIAGNOSE([obsolete],[your code may safely assume C89 semantics that RETSIGTYPE is void.
+Remove this warning and the `AC_CACHE_CHECK' when you adjust the code.])dnl
+AC_CACHE_CHECK([return type of signal handlers],[ac_cv_type_signal],[AC_COMPILE_IFELSE(
+[AC_LANG_PROGRAM([#include <sys/types.h>
+#include <signal.h>
+],
+		 [return *(signal (0, 0)) (0) == 1;])],
+		   [ac_cv_type_signal=int],
+		   [ac_cv_type_signal=void])])
+AC_DEFINE_UNQUOTED([RETSIGTYPE],[$ac_cv_type_signal],[Define as the return type of signal handlers
+		    (`int' or `void').])
+
 AC_TYPE_SIZE_T
 AC_TYPE_OFF_T
 

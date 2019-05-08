@@ -17,6 +17,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # limit so don't run it by default.
 
+# init.sh defines compare 
 . "${srcdir=.}/init.sh"; path_prepend_ ..
 
 printf anything | gzip > F.gz || framework_failure_

@@ -324,8 +324,7 @@ gzip_base_name (filename)
 /* ========================================================================
  * Unlink a file, working around the unlink readonly bug (if present).
  */
-int
-xunlink (filename)
+int xunlink (filename)
      char *filename;
 {
   int r = unlink (filename);

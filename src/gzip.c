@@ -66,7 +66,6 @@ static char const *const license_msg[] = {
 #include <limits.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <zlib.h>
 
 // GNU LIB Headers
 
@@ -178,11 +177,7 @@ static int no_time = -1;     /* don't save or restore the original file time */
 static int recursive = 0;    /* recurse through directories (-r) */
 static int list = 0;         /* list the file contents (-l) */
        int verbose = 0;      /* be verbose (-v) */
-<<<<<<< HEAD
        int quiet = 0;        /* be quiet (-q) */
-=======
-       int quiet = 0;        /* be very quiet (-q) */
->>>>>>> Close to full src directory working.
 static int do_lzw = 0;       /* generate output compatible with old compress (-Z) */
        int test = 0;         /* test .gz file integrity */
 static int foreground = 0;   /* set if program run in foreground */
@@ -222,17 +217,11 @@ static char volatile remove_ofname[MAX_PATH_LEN];
 
 static bool stdin_was_read;
 
-<<<<<<< HEAD
 // try to break this up into smaller bits
 
 off_t bytes_in;             /* number of input bytes  for one file*/
 off_t bytes_out;            /* number of output bytes */
 static off_t total_in;      /* input bytes for all files compress bits for total files*/
-=======
-off_t bytes_in;             /* number of input bytes */
-off_t bytes_out;            /* number of output bytes */
-static off_t total_in;      /* input bytes for all files */
->>>>>>> Close to full src directory working.
 static off_t total_out;	    /* output bytes for all files */
 char ifname[MAX_PATH_LEN]; /* input file name */
 char ofname[MAX_PATH_LEN]; /* output file name */
@@ -241,17 +230,10 @@ static struct stat istat;         /* status for input file */
 int  ifd;                  /* input file descriptor */
 int  ofd;                  /* output file descriptor */
 static int dfd = -1;       /* output directory file descriptor */
-<<<<<<< HEAD
 unsigned int insize;       /* valid bytes in inbuf */
 unsigned int inptr;        /* index of next byte to be processed in inbuf */
 unsigned int outcnt;       /* bytes in output buffer */
 int rsync = 0;             /* make rsyncable chunks */
-=======
-unsigned insize;           /* valid bytes in inbuf */
-unsigned inptr;            /* index of next byte to be processed in inbuf */
-unsigned outcnt;           /* bytes in output buffer */
-int rsync = 0;             /* make ryncable chunks */
->>>>>>> Close to full src directory working.
 
 static int handled_sig[] =
   {
@@ -292,7 +274,6 @@ static char const shortopts[] = "ab:cdfhH?klLmMnNqrS:tvVZ123456789";
 
 static const struct option longopts[] =
 {
-<<<<<<< HEAD
  /* { name,  has_arg,  *flag,  val } */
  /* If flag is a null pointer, then the val is a value which identifies this
     option. Often these values are chosen to uniquely identify particular long options.
@@ -328,42 +309,10 @@ static const struct option longopts[] =
     {"lzw",        0, NULL, 'Z'}, /* make output compatible with old compress */
     {"bits",       1, NULL, 'b'}, /* max number of bits per code (implies -Z) */
     {"rsyncable",  0, NULL, RSYNCABLE_OPTION}, /* make rsync-friendly archive */
-=======
- /* { name  has_arg  *flag  val } */
-    {"ascii",      0, 0, 'a'}, /* ascii text mode */
-    {"to-stdout",  0, 0, 'c'}, /* write output on standard output */
-    {"stdout",     0, 0, 'c'}, /* write output on standard output */
-    {"decompress", 0, 0, 'd'}, /* decompress */
-    {"uncompress", 0, 0, 'd'}, /* decompress */
- /* {"encrypt",    0, 0, 'e'},    encrypt */
-    {"force",      0, 0, 'f'}, /* force overwrite of output file */
-    {"help",       0, 0, 'h'}, /* give help */
- /* {"pkzip",      0, 0, 'k'},    force output in pkzip format */
-    {"keep",       0, 0, 'k'}, /* keep (don't delete) input files */
-    {"list",       0, 0, 'l'}, /* list .gz file contents */
-    {"license",    0, 0, 'L'}, /* display software license */
-    {"no-name",    0, 0, 'n'}, /* don't save or restore original name & time */
-    {"name",       0, 0, 'N'}, /* save or restore original name & time */
-    {"-presume-input-tty", no_argument, NULL, PRESUME_INPUT_TTY_OPTION},
-    {"quiet",      0, 0, 'q'}, /* quiet mode */
-    {"silent",     0, 0, 'q'}, /* quiet mode */
-    {"synchronous",0, 0, SYNCHRONOUS_OPTION},
-    {"recursive",  0, 0, 'r'}, /* recurse through directories */
-    {"suffix",     1, 0, 'S'}, /* use given suffix instead of .gz */
-    {"test",       0, 0, 't'}, /* test compressed file integrity */
-    {"verbose",    0, 0, 'v'}, /* verbose mode */
-    {"version",    0, 0, 'V'}, /* display version number */
-    {"fast",       0, 0, '1'}, /* compress faster */
-    {"best",       0, 0, '9'}, /* compress better */
-    {"lzw",        0, 0, 'Z'}, /* make output compatible with old compress */
-    {"bits",       1, 0, 'b'}, /* max number of bits per code (implies -Z) */
-    {"rsyncable",  0, 0, RSYNCABLE_OPTION}, /* make rsync-friendly archive */
->>>>>>> Close to full src directory working.
     { 0, 0, 0, 0 }
 };
 
 /* local functions */
-<<<<<<< HEAD
 // local just means static. static has multiple meanings
 local noreturn void try_help (void);
 static void help         (void);
@@ -386,40 +335,13 @@ static void install_signal_handlers (void);
 static void remove_output_file (bool);
 static void abort_gzip_signal (int);
 static noreturn void do_exit (int exitcode);
-=======
-
-local noreturn void try_help (void);
-local void help         (void);
-local void license      (void);
-local void version      (void);
-local int input_eof	(void);
-local void treat_stdin  (void);
-local void treat_file   (char *iname);
-local int create_outfile (void);
-local char *get_suffix  (char *name);
-local int  open_input_file (char *iname, struct stat *sbuf);
-local void discard_input_bytes (size_t nbytes, unsigned int flags);
-local int  make_ofname  (void);
-local void shorten_name  (char *name);
-local int  get_method   (int in);
-local void do_list      (int ifd, int method);
-local int  check_ofname (void);
-local void copy_stat    (struct stat *ifstat);
-local void install_signal_handlers (void);
-static void remove_output_file (bool);
-static void abort_gzip_signal (int);
-local noreturn void do_exit (int exitcode);
->>>>>>> Close to full src directory working.
 static void finish_out (void);
+
       int main          (int argc, char **argv);
 static int (*work) (int infile, int outfile) = zip; /* function to call */
 
 #if ! NO_DIR
-<<<<<<< HEAD
 static void treat_dir    (int fd, char *dir);
-=======
-local void treat_dir    (int fd, char *dir);
->>>>>>> Close to full src directory working.
 #endif
 
 #define strequ(s1, s2) (strcmp((s1),(s2)) == 0)
@@ -433,12 +355,8 @@ try_help ()
 }
 
 /* ======================================================================== */
-<<<<<<< HEAD
 static void
 help()
-=======
-local void help()
->>>>>>> Close to full src directory working.
 {
     static char const* const help_msg[] = {
  "Compress or uncompress FILEs (by default, compress FILES in-place).",
@@ -491,12 +409,8 @@ local void help()
 }
 
 /* ======================================================================== */
-<<<<<<< HEAD
 static void
 license()
-=======
-local void license()
->>>>>>> Close to full src directory working.
 {
     char const *const *p = license_msg;
 
@@ -505,24 +419,16 @@ local void license()
 }
 
 /* ======================================================================== */
-<<<<<<< HEAD
 static void
 version()
-=======
-local void version()
->>>>>>> Close to full src directory working.
 {
     license ();
     printf ("\n");
     printf ("Written by Jean-loup Gailly.\n");
 }
 
-<<<<<<< HEAD
 static void
 progerror (char const *string)
-=======
-local void progerror (char const *string)
->>>>>>> Close to full src directory working.
 {
     int e = errno;
     fprintf (stderr, "%s: ", program_name);
@@ -532,12 +438,8 @@ local void progerror (char const *string)
 }
 
 /* ======================================================================== */
-<<<<<<< HEAD
 int
 main (int argc, char **argv)
-=======
-int main (int argc, char **argv)
->>>>>>> Close to full src directory working.
 {
     int file_count;     /* number of files to process */
     size_t proglen;     /* length of program_name */
@@ -808,11 +710,7 @@ int main (int argc, char **argv)
 }
 
 /* Return nonzero when at end of file on input.  */
-<<<<<<< HEAD
 static int
-=======
-local int
->>>>>>> Close to full src directory working.
 input_eof ()
 {
   if (!decompress || last_member)
@@ -852,11 +750,7 @@ get_input_size_and_time (void)
 /* ========================================================================
  * Compress or decompress stdin
  */
-<<<<<<< HEAD
 static void treat_stdin()
-=======
-local void treat_stdin()
->>>>>>> Close to full src directory working.
 {
     if (!force && !list
         && (presume_input_tty
@@ -995,11 +889,7 @@ atdir_set (char const *dir, ptrdiff_t dirlen)
 /* ========================================================================
  * Compress or decompress the given file
  */
-<<<<<<< HEAD
 static void treat_file(iname)
-=======
-local void treat_file(iname)
->>>>>>> Close to full src directory working.
     char *iname;
 {
     /* Accept "-" as synonym for stdin */
@@ -1222,11 +1112,7 @@ volatile_strcpy (char volatile *dst, char const volatile *src)
  *   ofname has already been updated if there was an original name.
  * OUT assertions: ifd and ofd are closed in case of error.
  */
-<<<<<<< HEAD
 static int create_outfile()
-=======
-local int create_outfile()
->>>>>>> Close to full src directory working.
 {
   int name_shortened = 0;
   int flags = (O_WRONLY | O_CREAT | O_EXCL
@@ -1304,11 +1190,7 @@ local int create_outfile()
  * .??z suffix as indicating a compressed file; some people use .xyz
  * to denote volume data.
  */
-<<<<<<< HEAD
 static char *get_suffix(name)
-=======
-local char *get_suffix(name)
->>>>>>> Close to full src directory working.
     char *name;
 {
     int nlen, slen;
@@ -1523,11 +1405,7 @@ open_input_file (iname, sbuf)
  * Generate ofname given ifname. Return OK, or WARNING if file must be skipped.
  * Sets save_orig_name to true if the file name has been truncated.
  */
-<<<<<<< HEAD
 static int make_ofname()
-=======
-local int make_ofname()
->>>>>>> Close to full src directory working.
 {
     char *suff;            /* ofname z suffix */
 
@@ -1635,11 +1513,7 @@ discard_input_bytes (nbytes, flags)
  * IN assertions: there is at least one remaining compressed member.
  *   If the member is a zip file, it must be the only one.
  */
-<<<<<<< HEAD
 static int get_method(in)
-=======
-local int get_method(in)
->>>>>>> Close to full src directory working.
     int in;        /* input file descriptor */
 {
     uch flags;     /* compression flags */
@@ -2253,8 +2127,7 @@ local void do_exit(exitcode)
     exit(exitcode);
 }
 
-static void
-finish_out (void)
+local void finish_out (void)
 {
   if (fclose (stdout) != 0)
     write_error ();

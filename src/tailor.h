@@ -202,11 +202,9 @@
 #  define SET_BINARY_MODE(fd)
 #endif
 
-<<<<<<< HEAD
 
 // try to get rid of it.
-=======
->>>>>>> Close to full src directory working.
+
 #ifndef FALLTHROUGH
 # if __GNUC__ < 7
 #  define FALLTHROUGH ((void) 0)

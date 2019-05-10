@@ -23,15 +23,15 @@ ALL_RECURSIVE_TARGETS = $(SRC)
 BUILT_SOURCES =
 
 SUBDIRS = lib doc $(SRC) . tests
-AM_CPPFLAGS = -I$(top_srcdir)/lib
+AM_CPPFLAGS = -I./lib
 AM_CFLAGS = $(WARN_CFLAGS) $(WERROR_CFLAGS)
 
 # Tell the linker to omit references to unused shared libraries.
 AM_LDFLAGS = $(IGNORE_UNUSED_LIBRARIES_CFLAGS)
 
 noinst_LIBRARIES = libver.a
-nodist_libver_a_SOURCES = version.c version.h
-DISTCLEANFILES = version.c version.h
+nodist_libver_a_SOURCES = $(SRC)/version.c $(SRC)/version.h
+DISTCLEANFILES = $(SRC)/version.c $(SRC)/version.h
 
 man_MANS = gunzip.1 gzexe.1 gzip.1 \
   zcat.1 zcmp.1 zdiff.1 zforce.1 zgrep.1 zless.1 zmore.1 znew.1

@@ -4,17 +4,20 @@ BUILT_SOURCES =
 #AM_CFLAGS = $(WARN_CFLAGS) $(WERROR_CFLAGS)
 
 # Tell the linker to omit references to unused shared libraries.
-<<<<<<< HEAD
+
+#noinst_LIBRARIES = ../libver.a
+#nodist_libver_a_SOURCES = version.c version.h
+
 AM_LDFLAGS = $(IGNORE_USED_LIBRARIES_CFLAGS)
 gzip_LDADD = ../libver.a ../lib/libgzip.a
 gzip_LDADD += $(LIB_CLOCK_GETTIME)
-=======
+
 #AM_LDFLAGS = $(IGNORE_USED_LIBRARIES_CFLAGS)
 bin_PROGRAMS = gzip
 gzip_SOURCES = \
   bits.c deflate.c gzip.c inflate.c lzw.c \
   trees.c unlzh.c unlzw.c unpack.c unzip.c util.c zip.c
->>>>>>> Modified directory structure.
+
 if IBM_Z_DFLTCC
 gzip_SOURCES += dfltcc.c
 endif

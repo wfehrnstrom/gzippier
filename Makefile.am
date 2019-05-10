@@ -23,14 +23,14 @@ ALL_RECURSIVE_TARGETS = $(SRC)
 BUILT_SOURCES =
 
 SUBDIRS = lib doc $(SRC) . tests
-AM_CPPFLAGS = -I./lib
+AM_CPPFLAGS = -I$(top_srcdir)/lib
 AM_CFLAGS = $(WARN_CFLAGS) $(WERROR_CFLAGS)
 
 # Tell the linker to omit references to unused shared libraries.
-AM_LDFLAGS = $(IGNORE_UNUSED_LIBRARIES_CFLAGS)
+#AM_LDFLAGS = $(IGNORE_UNUSED_LIBRARIES_CFLAGS)
 
-noinst_LIBRARIES = libver.a
-nodist_libver_a_SOURCES = $(SRC)/version.c $(SRC)/version.h
+#noinst_LIBRARIES = libver.a
+#nodist_libver_a_SOURCES = $(SRC)/version.c $(SRC)/version.h
 DISTCLEANFILES = $(SRC)/version.c $(SRC)/version.h
 
 man_MANS = gunzip.1 gzexe.1 gzip.1 \
@@ -49,7 +49,6 @@ EXTRA_DIST = $(ACINCLUDE_INPUTS) $(man_MANS) \
   zegrep.in zfgrep.in zforce.in zgrep.in zless.in zmore.in znew.in
 noinst_HEADERS = $(SRC)/gzip.h $(SRC)/lzw.h
 
-bin_PROGRAMS = gzip
 bin_SCRIPTS = gunzip gzexe zcat zcmp zdiff \
   zegrep zfgrep zforce zgrep zless zmore znew
 
@@ -57,8 +56,8 @@ bin_SCRIPTS = gunzip gzexe zcat zcmp zdiff \
 #gzip_SOURCES = \
 #  bits.c deflate.c gzip.c inflate.c lzw.c \
 #  trees.c unlzh.c unlzw.c unpack.c unzip.c util.c zip.c
-gzip_LDADD = libver.a lib/libgzip.a
-gzip_LDADD += $(LIB_CLOCK_GETTIME)
+#gzip_LDADD = libver.a lib/libgzip.a
+#gzip_LDADD += $(LIB_CLOCK_GETTIME)
 #if IBM_Z_DFLTCC
 #gzip_SOURCES += dfltcc.c
 #endif

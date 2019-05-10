@@ -19,7 +19,11 @@
 
 SRC = src
 
+<<<<<<< HEAD
 ALL_RECURSIVE_TARGETS = $(src)
+=======
+ALL_RECURSIVE_TARGETS = $(SRC)
+>>>>>>> Modified directory structure.
 BUILT_SOURCES =
 
 SUBDIRS = lib doc $(SRC) . tests
@@ -44,14 +48,15 @@ EXTRA_DIST = $(ACINCLUDE_INPUTS) $(man_MANS) \
   gunzip.in gzexe.in gzip.doc \
   revision.h sample/makecrc.c \
   sample/ztouch sample/add.c sample/sub.c sample/zread.c sample/zfile \
-  tailor.h \
+  $(SRC)/tailor.h \
   zcat.in zcmp.in zdiff.in \
   zegrep.in zfgrep.in zforce.in zgrep.in zless.in zmore.in znew.in
-noinst_HEADERS = gzip.h lzw.h
+noinst_HEADERS = $(SRC)/gzip.h $(SRC)/lzw.h
 
 bin_PROGRAMS = gzip
 bin_SCRIPTS = gunzip gzexe zcat zcmp zdiff \
   zegrep zfgrep zforce zgrep zless zmore znew
+<<<<<<< HEAD
 # gzip_SOURCES = \
 #   bits.c deflate.c gzip.c inflate.c lzw.c \
 #   trees.c unlzh.c unlzw.c unpack.c unzip.c util.c zip.c
@@ -76,6 +81,31 @@ version.h: Makefile
 	$(AM_V_at)printf 'extern char const *Version;\n' > $@t
 	$(AM_V_at)chmod a-w $@t
 	$(AM_V_at)mv $@t $@
+=======
+#gzip_SOURCES = \
+#  bits.c deflate.c gzip.c inflate.c lzw.c \
+#  trees.c unlzh.c unlzw.c unpack.c unzip.c util.c zip.c
+gzip_LDADD = libver.a lib/libgzip.a
+gzip_LDADD += $(LIB_CLOCK_GETTIME)
+#if IBM_Z_DFLTCC
+#gzip_SOURCES += dfltcc.c
+#endif
+
+#BUILT_SOURCES += version.c
+#version.c: Makefile
+#	$(AM_V_GEN)rm -f $@
+#	$(AM_V_at)printf '#include <config.h>\n' > $@t
+#	$(AM_V_at)printf 'char const *Version = "$(PACKAGE_VERSION)";\n' >> $@t
+#	$(AM_V_at)chmod a-w $@t
+#	$(AM_V_at)mv $@t $@
+
+#BUILT_SOURCES += version.h
+#version.h: Makefile
+#	$(AM_V_GEN)rm -f $@
+#	$(AM_V_at)printf 'extern char const *Version;\n' > $@t
+#	$(AM_V_at)chmod a-w $@t
+#	$(AM_V_at)mv $@t $@
+>>>>>>> Modified directory structure.
 
 gzip.doc: gzip.1
 	$(AM_V_GEN)groff -man -Tascii $(srcdir)/gzip.1 | col -b | uniq > $@-t \
@@ -118,7 +148,7 @@ new_path = PATH=.$(PATH_SEPARATOR)$$PATH
 # AM_V_at signals that it should not be.
 
 FILES_TO_CHECK = $(bin_SCRIPTS) \
-  $(top_srcdir)/ChangeLog $(top_srcdir)/configure $(top_srcdir)/gzip.c
+  $(top_srcdir)/ChangeLog $(top_srcdir)/configure $(SRC)/gzip.c
 check-local: $(FILES_TO_CHECK) $(bin_PROGRAMS) gzip.doc.gz
 	$(AM_V_GEN)$(new_path); { test '$(srcdir)' != . \
 				    || zdiff gzip.doc.gz; }

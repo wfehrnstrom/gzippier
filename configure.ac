@@ -18,7 +18,6 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 # 02111-1307, USA.
-
 AC_PREREQ([2.63])
 AC_INIT([gzip],[m4_esyscmd(build-aux/git-version-gen .tarball-version)],[bug-gzip@gnu.org])
 
@@ -278,5 +277,5 @@ AC_DEFINE_UNQUOTED([RETSIGTYPE],[$ac_cv_type_signal],[Define as the return type 
 AC_TYPE_SIZE_T
 AC_TYPE_OFF_T
 
-AC_CONFIG_FILES([Makefile doc/Makefile lib/Makefile tests/Makefile])
+AC_CONFIG_FILES([Makefile doc/Makefile lib/Makefile tests/Makefile src/Makefile])
 AC_OUTPUT

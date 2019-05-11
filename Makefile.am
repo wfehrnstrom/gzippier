@@ -26,11 +26,6 @@ SUBDIRS = lib doc $(SRC) . tests
 AM_CPPFLAGS = -I$(top_srcdir)/lib
 AM_CFLAGS = $(WARN_CFLAGS) $(WERROR_CFLAGS)
 
-# Tell the linker to omit references to unused shared libraries.
-#AM_LDFLAGS = $(IGNORE_UNUSED_LIBRARIES_CFLAGS)
-
-#noinst_LIBRARIES = libver.a
-#nodist_libver_a_SOURCES = $(SRC)/version.c $(SRC)/version.h
 DISTCLEANFILES = $(SRC)/version.c $(SRC)/version.h
 
 man_MANS = gunzip.1 gzexe.1 gzip.1 \
@@ -51,32 +46,6 @@ noinst_HEADERS = $(SRC)/gzip.h $(SRC)/lzw.h
 
 bin_SCRIPTS = gunzip gzexe zcat zcmp zdiff \
   zegrep zfgrep zforce zgrep zless zmore znew
-
-
-#gzip_SOURCES = \
-#  bits.c deflate.c gzip.c inflate.c lzw.c \
-#  trees.c unlzh.c unlzw.c unpack.c unzip.c util.c zip.c
-#gzip_LDADD = libver.a lib/libgzip.a
-#gzip_LDADD += $(LIB_CLOCK_GETTIME)
-#if IBM_Z_DFLTCC
-#gzip_SOURCES += dfltcc.c
-#endif
-
-#BUILT_SOURCES += version.c
-#version.c: Makefile
-#	$(AM_V_GEN)rm -f $@
-#	$(AM_V_at)printf '#include <config.h>\n' > $@t
-#	$(AM_V_at)printf 'char const *Version = "$(PACKAGE_VERSION)";\n' >> $@t
-#	$(AM_V_at)chmod a-w $@t
-#	$(AM_V_at)mv $@t $@
-
-#BUILT_SOURCES += version.h
-#version.h: Makefile
-#	$(AM_V_GEN)rm -f $@
-#	$(AM_V_at)printf 'extern char const *Version;\n' > $@t
-#	$(AM_V_at)chmod a-w $@t
-#	$(AM_V_at)mv $@t $@
-
 
 gzip.doc: gzip.1
 	$(AM_V_GEN)groff -man -Tascii $(srcdir)/gzip.1 | col -b | uniq > $@-t \
@@ -119,13 +88,13 @@ new_path = PATH=.$(PATH_SEPARATOR)$$PATH
 # AM_V_at signals that it should not be.
 
 FILES_TO_CHECK = $(bin_SCRIPTS) \
-  $(top_srcdir)/ChangeLog $(top_srcdir)/configure $(SRC)/gzip.c
+  $(top_srcdir)/ChangeLog $(top_srcdir)/configure $(srcdir)/gzip.c
 check-local: $(FILES_TO_CHECK) $(bin_PROGRAMS) gzip.doc.gz
 	$(AM_V_GEN)$(new_path); { test '$(srcdir)' != . \
 				    || zdiff gzip.doc.gz; }
-	$(AM_V_at)$(new_path); zdiff $(srcdir)/gzip.doc $(srcdir)/gzip.doc
-	$(AM_V_at)$(new_path); zdiff $(srcdir)/gzip.doc gzip.doc.gz
-	$(AM_V_at)$(new_path); zdiff - $(srcdir)/gzip.doc <gzip.doc.gz
+	$(AM_V_at)$(new_path); zdiff $(top_srcdir)/gzip.doc $(top_srcdir)/gzip.doc
+	$(AM_V_at)$(new_path); zdiff $(top_srcdir)/gzip.doc gzip.doc.gz
+	$(AM_V_at)$(new_path); zdiff - $(top_srcdir)/gzip.doc <gzip.doc.gz
 	$(AM_V_at)$(new_path); zdiff gzip.doc.gz gzip.doc.gz
 	$(AM_V_at)$(new_path); zgrep -iV >/dev/null
 	$(AM_V_at)$(new_path);				\

@@ -36,4 +36,3 @@ version.h: Makefile
 	$(AM_V_at)printf 'extern char const *Version;\n' > $@t
 	$(AM_V_at)chmod a-w $@t
 	$(AM_V_at)mv $@t $@
-

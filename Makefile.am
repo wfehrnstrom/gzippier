@@ -52,7 +52,7 @@ gzip.doc: gzip.1
 	  && mv $@-t $@
 
 gzip.doc.gz: gzip.doc $(bin_PROGRAMS)
-	$(AM_V_GEN)./gzip < $(srcdir)/gzip.doc >$@-t && mv $@-t $@
+	$(AM_V_GEN)$(top_srcdir)/$(SRC)/gzip < $(srcdir)/gzip.doc >$@-t && mv $@-t $@
 
 SUFFIXES = .in
 .in:
@@ -88,10 +88,11 @@ new_path = PATH=.$(PATH_SEPARATOR)$$PATH
 # AM_V_at signals that it should not be.
 
 FILES_TO_CHECK = $(bin_SCRIPTS) \
-  $(top_srcdir)/ChangeLog $(top_srcdir)/configure $(srcdir)/gzip.c
+  $(top_srcdir)/ChangeLog $(top_srcdir)/configure $(top_srcdir)/$(SRC)/gzip.c
 check-local: $(FILES_TO_CHECK) $(bin_PROGRAMS) gzip.doc.gz
 	$(AM_V_GEN)$(new_path); { test '$(srcdir)' != . \
 				    || zdiff gzip.doc.gz; }
+	$(AM_V_GEN)$(new_path); cp $(top_srcdir)/$(SRC)/gzip gzip
 	$(AM_V_at)$(new_path); zdiff $(top_srcdir)/gzip.doc $(top_srcdir)/gzip.doc
 	$(AM_V_at)$(new_path); zdiff $(top_srcdir)/gzip.doc gzip.doc.gz
 	$(AM_V_at)$(new_path); zdiff - $(top_srcdir)/gzip.doc <gzip.doc.gz
@@ -99,11 +100,12 @@ check-local: $(FILES_TO_CHECK) $(bin_PROGRAMS) gzip.doc.gz
 	$(AM_V_at)$(new_path); zgrep -iV >/dev/null
 	$(AM_V_at)$(new_path);				\
 	for opt in --rsyncable '' -1 -9; do		\
-          for file in $(FILES_TO_CHECK); do		\
-            gzip $$opt -c -- "$$file"			\
-              | gzip -d | cmp - "$$file" || exit 1;	\
-          done;						\
+						for file in $(FILES_TO_CHECK); do		\
+			        gzip $$opt -c -- "$$file"			\
+			          | gzip -d | cmp - "$$file" || exit 1;	\
+			      done;						\
 	done
+	$(AM_V_GEN)$(new_path)
 
 install-exec-hook: remove-installed-links
 install-exec-hook remove-installed-links:

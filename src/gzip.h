@@ -283,7 +283,7 @@ extern noreturn void abort_gzip (void);
 
         /* in deflate.c */
 extern void lm_init (int pack_level);
-extern off_t deflate (int pack_level);
+extern off_t deflateGZIP (int pack_level);
 
         /* in trees.c */
 extern void ct_init     (ush *attr, int *method);
@@ -325,7 +325,7 @@ extern void display_ratio (off_t num, off_t den, FILE *file);
 extern void fprint_off    (FILE *, off_t, int);
 
         /* in inflate.c */
-extern int inflate (void);
+extern int inflateGZIP (void);
 
         /* in dfltcc.c */
 #ifdef IBM_Z_DFLTCC

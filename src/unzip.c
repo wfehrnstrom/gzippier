@@ -104,7 +104,7 @@ int check_zipfile(in)
 
 /* Inflate using zlib
  */
-int inflate(void) 
+int inflateGZIP(void) 
 {
     int ret;
     unsigned have;

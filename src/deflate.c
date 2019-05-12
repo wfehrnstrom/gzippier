@@ -68,7 +68,7 @@
  *      void lm_init (int pack_level, ush *flags)
  *          Initialize the "longest match" routines for a new file
  *
- *      off_t deflate (void)
+ *      off_t deflateGZIP (void)
  *          Processes a new input file and return its compressed length. Sets
  *          the compressed length, crc, deflate flags and internal file
  *          attributes.
@@ -719,7 +719,7 @@ local off_t deflate_fast()
  * no better match at the next window position.
  */
 off_t
-deflate (int pack_level)
+deflateGZIP (int pack_level)
 {
     IPos hash_head;          /* head of hash chain */
     IPos prev_match;         /* previous match */

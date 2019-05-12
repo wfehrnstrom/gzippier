@@ -93,7 +93,7 @@ int zip(in, out)
 #ifdef IBM_Z_DFLTCC
     dfltcc_deflate (level);
 #else
-    deflate (level);
+    deflateGZIP (level);
 #endif
 
 #ifndef NO_SIZE_CHECK

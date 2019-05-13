@@ -80,8 +80,8 @@ gen-ChangeLog:
 	      mv $(distdir)/cl-t $(distdir)/ChangeLog; }		\
 	fi
 
-# Prepend "." to $PATH:
-new_path = PATH=.$(PATH_SEPARATOR)$$PATH
+# Prepend "." and "./lib" to $PATH:
+new_path = PATH=.$(PATH_SEPARATOR)./lib$(PATH_SEPARATOR)$$PATH
 
 # A simple test, just of gzip -- more of a sanity check than anything else.
 # AM_V_GEN signals that the command should be printed out in silent mode.

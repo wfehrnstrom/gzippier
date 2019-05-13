@@ -85,6 +85,9 @@ static char const *const license_msg[] = {
 #include "xalloc.h"
 #include "yesno.h"
 #include "version.h"
+
+// Custom LIB headers
+
 #include "zlib.h"
 
 

@@ -942,20 +942,20 @@ static int inflate_block(int *e)
 
 /* int*/
 /* inflate(void)*/
-/* /* decompress an inflated entry */*/
+/* // decompress an inflated entry */
 /* {*/
-/*   int e;                /* last block flag */*/
-/*   int r;                /* result code */*/
-/*   unsigned h;           /* maximum struct huft's malloc'ed */*/
+/*   int e;                // last block flag */
+/*   int r;                // result code */
+/*   unsigned h;           // maximum struct huft's malloc'ed */
 
 
-/*   /* initialize window, bit buffer */*/
+/*   // initialize window, bit buffer */
 /*   wp = 0;*/
 /*   bk = 0;*/
 /*   bb = 0;*/
 
 
-/*   /* decompress until the last block */*/
+/*   // decompress until the last block */
 /*   h = 0;*/
 /*   do {*/
 /*     hufts = 0;*/
@@ -965,19 +965,19 @@ static int inflate_block(int *e)
 /*       h = hufts;*/
 /*   } while (!e);*/
 
-/*   /* Undo too much lookahead. The next read will be byte aligned so we*/
-/*    * can discard unused bits in the last meaningful byte.*/
-/*    */*/
+/*   // Undo too much lookahead. The next read will be byte aligned so we */
+/*   // can discard unused bits in the last meaningful byte.*/
+/*   // */
 /*   while (bk >= 8) {*/
 /*     bk -= 8;*/
 /*     inptr--;*/
 /*   }*/
 
-/*   /* flush out slide */*/
+/*   // flush out slide */
 /*   flush_output(wp);*/
 
 
-/*   /* return success */*/
+/*   // return success */
 /*   Trace ((stderr, "<%u> ", h));*/
 /*   return 0;*/
 /* }*/

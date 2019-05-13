@@ -71,7 +71,6 @@ static char const *const license_msg[] = {
 
 #include "intprops.h"
 #include "tailor.h"
-#include "gzip.h"
 #include "lzw.h"
 #include "revision.h"
 #include "timespec.h"
@@ -89,6 +88,9 @@ static char const *const license_msg[] = {
 // Custom LIB headers
 
 #include "zlib.h"
+
+
+#include "gzip.h"
 
 
                 /* configuration */

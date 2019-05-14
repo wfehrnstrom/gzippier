@@ -83,7 +83,7 @@ gzip.doc: gzip.1
 	  && mv $@-t $@
 
 gzip.doc.gz: gzip.doc $(bin_PROGRAMS)
-	$(AM_V_GEN)./gzip < $(srcdir)/gzip.doc >$@-t && mv $@-t $@
+	$(AM_V_GEN)$(top_srcdir)/$(SRC)/gzip < $(srcdir)/gzip.doc >$@-t && mv $@-t $@
 
 SUFFIXES = .in
 .in:
@@ -119,7 +119,7 @@ new_path = PATH=.$(PATH_SEPARATOR)$$PATH
 # AM_V_at signals that it should not be.
 
 FILES_TO_CHECK = $(bin_SCRIPTS) \
-  $(top_srcdir)/ChangeLog $(top_srcdir)/configure $(SRC)/gzip.c
+  $(top_srcdir)/ChangeLog $(top_srcdir)/configure $(top_srcdir)/$(SRC)/gzip.c
 check-local: $(FILES_TO_CHECK) $(bin_PROGRAMS) gzip.doc.gz
 	$(AM_V_GEN)$(new_path); { test '$(srcdir)' != . \
 				    || zdiff gzip.doc.gz; }

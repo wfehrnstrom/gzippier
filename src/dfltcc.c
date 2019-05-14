@@ -236,7 +236,7 @@ static dfltcc_cc
 dfltcc_cmpr_xpnd (struct dfltcc_param_v0 *param, int fn)
 {
   uch *next_out = outbuf + outcnt;
-  size_t avail_out = OUTBUFSIZ - outcnt;
+  size_t avail_out = OUTBUFSIZE - outcnt;
   const uch *next_in = inbuf + inptr;
   size_t avail_in = insize - inptr;
   dfltcc_cc cc = dfltcc (fn | HBT_CIRCULAR, param,
@@ -246,7 +246,7 @@ dfltcc_cmpr_xpnd (struct dfltcc_param_v0 *param, int fn)
   off_t consumed_in = next_in - (inbuf + inptr);
   inptr += consumed_in;
   total_in += consumed_in;
-  outcnt += ((OUTBUFSIZ - outcnt) - avail_out);
+  outcnt += ((OUTBUFSIZE - outcnt) - avail_out);
   return cc;
 }
 
@@ -333,7 +333,7 @@ dfltcc_deflate (int pack_level)
   while (true)
     {
       /* Flush the output data.  */
-      if (outcnt > OUTBUFSIZ - 8)
+      if (outcnt > OUTBUFSIZE - 8)
         flush_outbuf ();
 
       /* Close the block.  */
@@ -400,7 +400,7 @@ dfltcc_inflate (void)
   while (true)
     {
       /* Perform I/O.  */
-      if (outcnt == OUTBUFSIZ)
+      if (outcnt == OUTBUFSIZE)
         flush_outbuf ();
       if (inptr == insize)
         {

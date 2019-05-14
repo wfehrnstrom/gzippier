@@ -166,7 +166,7 @@ int unlzw(in, out)
         posbits = 0;
 
         if (insize < INBUF_EXTRA) {
-            rsize = read_buffer (in, (char *) inbuf + insize, INBUFSIZ);
+            rsize = read_buffer (in, (char *) inbuf + insize, INBUFSIZE);
             if (rsize == -1) {
                 read_error();
             }
@@ -247,15 +247,15 @@ int unlzw(in, out)
             {
                 int i;
 
-                if (outpos+(i = (de_stack-stackp)) >= OUTBUFSIZ) {
+                if (outpos+(i = (de_stack-stackp)) >= OUTBUFSIZE) {
                     do {
-                        if (i > OUTBUFSIZ-outpos) i = OUTBUFSIZ-outpos;
+                        if (i > OUTBUFSIZE-outpos) i = OUTBUFSIZE-outpos;
 
                         if (i > 0) {
                             memcpy(outbuf+outpos, stackp, i);
                             outpos += i;
                         }
-                        if (outpos >= OUTBUFSIZ) {
+                        if (outpos >= OUTBUFSIZE) {
                             if (!test) {
                                 write_buf(out, (char*)outbuf, outpos);
                                 bytes_out += (off_t)outpos;

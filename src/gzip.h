@@ -80,20 +80,20 @@ extern int method;         /* compression method */
 // if we don't already do this in gzip.
 
 
-#ifndef	INBUFSIZ
+#ifndef	INBUFSIZE
 #  ifdef SMALL_MEM
-#    define INBUFSIZ  0x2000  /* input buffer size */
+#    define INBUFSIZE 0x2000  /* input buffer size */
 #  else
-#    define INBUFSIZ  0x40000 /* input buffer size */
+#    define INBUFSIZE 0x40000 /* input buffer size */
 #  endif
 #endif
 #define INBUF_EXTRA  64     /* required by unlzw() */
 
-#ifndef	OUTBUFSIZ
+#ifndef	OUTBUFSIZE
 #  ifdef SMALL_MEM
-#    define OUTBUFSIZ   8192  /* output buffer size */
+#    define OUTBUFSIZE   8192  /* output buffer size */
 #  else
-#    define OUTBUFSIZ 0x40000 /* output buffer size */
+#    define OUTBUFSIZE 0x40000 /* output buffer size */
 #  endif
 #endif
 #define OUTBUF_EXTRA 2048   /* required by unlzw() */
@@ -215,14 +215,14 @@ extern int save_orig_name; /* set if original name must be saved */
  * suffix table instead of its output buffer, so it does not use put_ubyte
  * (to be cleaned up).
  */
-#define put_byte(c) {outbuf[outcnt++]=(uch)(c); if (outcnt==OUTBUFSIZ)\
+#define put_byte(c) {outbuf[outcnt++]=(uch)(c); if (outcnt==OUTBUFSIZE)\
    flush_outbuf();}
 #define put_ubyte(c) {window[outcnt++]=(uch)(c); if (outcnt==WSIZE)\
    flush_window();}
 
 /* Output a 16 bit value, lsb first */
 #define put_short(w) \
-{ if (outcnt < OUTBUFSIZ-2) { \
+{ if (outcnt < OUTBUFSIZE-2) { \
     outbuf[outcnt++] = (uch) ((w) & 0xff); \
     outbuf[outcnt++] = (uch) ((ush)(w) >> 8); \
   } else { \

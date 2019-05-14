@@ -66,7 +66,7 @@ local int peek_bits; /* Number of peek bits currently used */
  * codes encountered in the input stream are short codes (by construction).
  * So for most codes a single lookup will be necessary.
  */
-#if (1<<MAX_PEEK) > OUTBUFSIZ
+#if (1<<MAX_PEEK) > OUTBUFSIZE
     error cannot overlay prefix_len and outbuf
 #endif
 

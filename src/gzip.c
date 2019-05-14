@@ -148,8 +148,8 @@ static char const *const license_msg[] = {
 #else
 # define BUFFER_ALIGNED /**/
 #endif
-DECLARE(uch BUFFER_ALIGNED, inbuf,  INBUFSIZ +INBUF_EXTRA);
-DECLARE(uch BUFFER_ALIGNED, outbuf, OUTBUFSIZ+OUTBUF_EXTRA);
+DECLARE(uch BUFFER_ALIGNED, inbuf,  INBUFSIZE +INBUF_EXTRA);
+DECLARE(uch BUFFER_ALIGNED, outbuf, OUTBUFSIZE+OUTBUF_EXTRA);
 DECLARE(ush, d_buf,  DIST_BUFSIZE);
 DECLARE(uch BUFFER_ALIGNED, window, 2L*WSIZE);
 #ifndef MAXSEG_64K
@@ -610,8 +610,8 @@ main (int argc, char **argv)
     if (do_lzw && !decompress) work = lzw;
 
     /* Allocate all global buffers (for DYN_ALLOC option) */
-    ALLOC(uch, inbuf,  INBUFSIZ +INBUF_EXTRA);
-    ALLOC(uch, outbuf, OUTBUFSIZ+OUTBUF_EXTRA);
+    ALLOC(uch, inbuf,  INBUFSIZE+INBUF_EXTRA);
+    ALLOC(uch, outbuf, OUTBUFSIZE+OUTBUF_EXTRA);
     ALLOC(ush, d_buf,  DIST_BUFSIZE);
     ALLOC(uch, window, 2L*WSIZE);
 #ifndef MAXSEG_64K
@@ -666,7 +666,7 @@ input_eof ()
 
   if (inptr == insize)
     {
-      if (insize != INBUFSIZ || fill_inbuf (1) == EOF)
+      if (insize != INBUFSIZE|| fill_inbuf (1) == EOF)
         return 1;
 
       /* Unget the char that fill_inbuf got.  */

@@ -41,8 +41,6 @@
 #include <stdnoreturn.h>
 #define memzero(s, n) memset ((voidp)(s), 0, (n))
 
-#define local static
-
 typedef unsigned char  uch;
 typedef unsigned short ush;
 typedef unsigned long  ulg;
@@ -107,8 +105,8 @@ extern int method;         /* compression method */
 #endif
 
 #ifdef DYN_ALLOC
-#  define EXTERN(type, array)  extern type * near array
-#  define DECLARE(type, array, size)  type * near array
+#  define EXTERN(type, array)  extern type * array
+#  define DECLARE(type, array, size)  type * array
 #  define ALLOC(type, array, size) { \
       array = (type*)fcalloc((size_t)(((size)+1L)/2), 2*sizeof(type)); \
       if (!array) xalloc_die (); \

@@ -76,7 +76,7 @@
  * Local data used by the "bit string" routines.
  */
 
-local file_t zfile; /* output gzip file */
+static file_t zfile; /* output gzip file */
 
 unsigned short bi_buf;
 /* Output buffer. bits are inserted starting at the bottom (least significant

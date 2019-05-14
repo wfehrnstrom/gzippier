@@ -189,11 +189,11 @@ static int foreground = 0;   /* set if program run in foreground */
        int save_orig_name;   /* set if original name must be saved */
 static int last_member;      /* set for .zip and .Z files */
 static int part_nb;          /* number of parts in .gz file */
-       off_t ifile_size;      /* input file size, -1 for devices (debug only) */
+       off_t ifile_size;     /* input file size, -1 for devices (debug only) */
 static char *env;            /* contents of GZIP env variable */
 static char const *z_suffix; /* default suffix (can be set with --suffix) */
 static size_t z_len;         /* strlen(z_suffix) */
-       int threads = 0;
+       int threads = 0;      /* no parallel if deafults threads=0 */
 
 /* The original timestamp (modification time).  If the original is
    unknown, TIME_STAMP.tv_nsec is negative.  If the original is
@@ -271,7 +271,7 @@ enum
   ENV_OPTION
 };
 
-static char const shortopts[] = "ab:cdfhHj?klLmMnNqrS:tvVZ123456789";
+static char const shortopts[] = "ab:cdfhH?j:klLmMnNqrS:tvVZ123456789";
 
 static const struct option longopts[] =
 {
@@ -448,7 +448,7 @@ main (int argc, char **argv)
     size_t proglen;     /* length of program_name */
     char **argv_copy;
     int env_argc;
-~    char **env_argv;
+    char **env_argv;
 
     EXPAND(argc, argv); /* wild card expansion if necessary */
 
@@ -495,6 +495,7 @@ main (int argc, char **argv)
             if (env_argv[optind] && strequ (env_argv[optind], "--"))
               optc = ENV_OPTION + '-';
             else
+
               {
                 optc = getopt_long (env_argc, env_argv, shortopts, longopts,
                                     &longind);
@@ -626,7 +627,7 @@ main (int argc, char **argv)
             level = optc - '0';
             break;
 	case 'j':
-	    maxbits = atoi(optarg);
+	    threads = atoi(optarg);
             for (; *optarg; optarg++)
               if (! ('0' <= *optarg && *optarg <= '9'))
                 {
@@ -635,7 +636,7 @@ main (int argc, char **argv)
                   try_help ();
                 }
 
-            if (! (optarg > 0))
+            if (! (threads > 0))
               {
 		fprintf (stderr, "%s: -j operand is not a positive integer\n",
                          program_name);

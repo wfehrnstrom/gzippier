@@ -314,7 +314,7 @@ static const struct option longopts[] =
 
 /* local functions */
 // local just means static. static has multiple meanings
-local noreturn void try_help (void);
+static noreturn void try_help (void);
 static void help         (void);
 static void license      (void);
 static void version      (void);
@@ -1747,7 +1747,7 @@ static int get_method(in)
  * If the given method is < 0, display the accumulated totals.
  * IN assertions: time_stamp, header_bytes and ifile_size are initialized.
  */
-local void do_list(ifd, method)
+static void do_list(ifd, method)
     int ifd;     /* input file descriptor */
     int method;  /* compression method */
 {
@@ -1855,7 +1855,7 @@ local void do_list(ifd, method)
  *
  * IN assertion: for compression, the suffix of the given name is z_suffix.
  */
-local void shorten_name(name)
+static void shorten_name(name)
     char *name;
 {
     int len;                 /* length of name without z_suffix */
@@ -1913,7 +1913,7 @@ local void shorten_name(name)
  * The compressed file already exists, so ask for confirmation.
  * Return ERROR if the file must be skipped.
  */
-local int check_ofname()
+static int check_ofname()
 {
     /* Ask permission to overwrite the existing file */
     if (!force) {
@@ -1960,7 +1960,7 @@ do_chown (int fd, char const *name, uid_t uid, gid_t gid)
  * Copy modes, times, ownership from input file to output file.
  * IN assertion: to_stdout is false.
  */
-local void copy_stat(ifstat)
+static void copy_stat(ifstat)
     struct stat *ifstat;
 {
     mode_t mode = ifstat->st_mode & S_IRWXUGO;
@@ -2025,7 +2025,7 @@ local void copy_stat(ifstat)
 /* ========================================================================
  * Recurse through the given directory.
  */
-local void treat_dir (fd, dir)
+static void treat_dir (fd, dir)
     int fd;
     char *dir;
 {
@@ -2105,7 +2105,7 @@ install_signal_handlers ()
 /* ========================================================================
  * Free all dynamically allocated variables and exit with the given code.
  */
-local void do_exit(exitcode)
+static void do_exit(exitcode)
     int exitcode;
 {
     static int in_exit = 0;
@@ -2127,7 +2127,7 @@ local void do_exit(exitcode)
     exit(exitcode);
 }
 
-local void finish_out (void)
+static void finish_out (void)
 {
   if (fclose (stdout) != 0)
     write_error ();

@@ -35,13 +35,7 @@
 #endif
 
 #ifdef MSDOS
-#  ifdef __GNUC__
-     /* DJGPP version 1.09+ on MS-DOS.
-      * The DJGPP 1.09 stat() function must be upgraded before gzip will
-      * fully work.
-      */
-#    define near
-#  else
+#  ifndef __GNUC__
 #    define MAXSEG_64K
 #    ifdef __TURBOC__
 #      define off_t long
@@ -62,8 +56,6 @@
 #  if !defined(NO_ASM) && !defined(ASMV)
 #    define ASMV
 #  endif
-#else
-#  define near
 #endif
 
 #ifdef OS2
@@ -81,8 +73,6 @@
 #  ifdef _MSC_VER
 #    define HAVE_SYS_UTIME_H
 #    define MAXSEG_64K
-#    undef near
-#    define near _near
 #  endif
 #  ifdef __EMX__
 #    define HAVE_SYS_UTIME_H

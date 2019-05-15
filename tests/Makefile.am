@@ -96,7 +96,7 @@ TESTS_ENVIRONMENT =					\
   PACKAGE_VERSION=$(PACKAGE_VERSION)			\
   PERL='$(PERL)'					\
   SHELL='$(SHELL)'					\
-  PATH='$(abs_top_builddir)$(PATH_SEPARATOR)'"$$PATH"	\
+  PATH='$(abs_top_builddir)$(PATH_SEPARATOR)$(top_srcdir)/$(SRC)$(PATH_SEPARATOR)'"$$PATH"		\
   ; 9>&2
 
 VERBOSE = yes

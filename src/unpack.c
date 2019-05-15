@@ -38,26 +38,26 @@
  * Huffman tree.
  */
 
-local ulg orig_len;       /* original uncompressed length */
-local int max_len;        /* maximum bit length of Huffman codes */
+static ulg orig_len;       /* original uncompressed length */
+static int max_len;        /* maximum bit length of Huffman codes */
 
-local uch literal[LITERALS];
+static uch literal[LITERALS];
 /* The literal bytes present in the Huffman tree. The EOB code is not
  * represented.
  */
 
-local int lit_base[MAX_BITLEN+1];
+static int lit_base[MAX_BITLEN+1];
 /* All literals of a given bit length are contiguous in literal[] and
  * have contiguous codes. literal[code+lit_base[len]] is the literal
  * for a code of len bits.
  */
 
-local int leaves [MAX_BITLEN+1]; /* Number of leaves for each bit length */
-local int parents[MAX_BITLEN+1]; /* Number of parents for each bit length */
+static int leaves [MAX_BITLEN+1]; /* Number of leaves for each bit length */
+static int parents[MAX_BITLEN+1]; /* Number of parents for each bit length */
 
-local int peek_bits; /* Number of peek bits currently used */
+static int peek_bits; /* Number of peek bits currently used */
 
-/* local uch prefix_len[1 << MAX_PEEK]; */
+/* static uch prefix_len[1 << MAX_PEEK]; */
 #define prefix_len outbuf
 /* For each bit pattern b of peek_bits bits, prefix_len[b] is the length
  * of the Huffman code starting with a prefix of b (upper bits), or 0
@@ -66,14 +66,14 @@ local int peek_bits; /* Number of peek bits currently used */
  * codes encountered in the input stream are short codes (by construction).
  * So for most codes a single lookup will be necessary.
  */
-#if (1<<MAX_PEEK) > OUTBUFSIZ
+#if (1<<MAX_PEEK) > OUTBUFSIZE
     error cannot overlay prefix_len and outbuf
 #endif
 
-local ulg bitbuf;
+static ulg bitbuf;
 /* Bits are added on the low part of bitbuf and read from the high part. */
 
-local int valid;                  /* number of valid bits in bitbuf */
+static int valid;                  /* number of valid bits in bitbuf */
 /* all bits above the last valid bit are always zero */
 
 /* Read an input byte, reporting an error at EOF.  */
@@ -104,13 +104,13 @@ read_byte (void)
 
 /* Local functions */
 
-local void read_tree  (void);
-local void build_tree (void);
+static void read_tree  (void);
+static void build_tree (void);
 
 /* ===========================================================================
  * Read the Huffman tree.
  */
-local void read_tree()
+static void read_tree()
 {
     int len;  /* bit length */
     int base; /* base offset for a sequence of leaves */
@@ -167,7 +167,7 @@ local void read_tree()
 /* ===========================================================================
  * Build the Huffman tree and the prefix table.
  */
-local void build_tree()
+static void build_tree()
 {
     int nodes = 0; /* number of nodes (parents+leaves) at current bit length */
     int len;       /* current bit length */

@@ -41,8 +41,6 @@
 #include <stdnoreturn.h>
 #define memzero(s, n) memset ((voidp)(s), 0, (n))
 
-#define local static
-
 typedef unsigned char  uch;
 typedef unsigned short ush;
 typedef unsigned long  ulg;
@@ -80,20 +78,20 @@ extern int method;         /* compression method */
 // if we don't already do this in gzip.
 
 
-#ifndef	INBUFSIZ
+#ifndef	INBUFSIZE
 #  ifdef SMALL_MEM
-#    define INBUFSIZ  0x2000  /* input buffer size */
+#    define INBUFSIZE 0x2000  /* input buffer size */
 #  else
-#    define INBUFSIZ  0x40000 /* input buffer size */
+#    define INBUFSIZE 0x40000 /* input buffer size */
 #  endif
 #endif
 #define INBUF_EXTRA  64     /* required by unlzw() */
 
-#ifndef	OUTBUFSIZ
+#ifndef	OUTBUFSIZE
 #  ifdef SMALL_MEM
-#    define OUTBUFSIZ   8192  /* output buffer size */
+#    define OUTBUFSIZE   8192  /* output buffer size */
 #  else
-#    define OUTBUFSIZ 0x40000 /* output buffer size */
+#    define OUTBUFSIZE 0x40000 /* output buffer size */
 #  endif
 #endif
 #define OUTBUF_EXTRA 2048   /* required by unlzw() */
@@ -107,8 +105,8 @@ extern int method;         /* compression method */
 #endif
 
 #ifdef DYN_ALLOC
-#  define EXTERN(type, array)  extern type * near array
-#  define DECLARE(type, array, size)  type * near array
+#  define EXTERN(type, array)  extern type * array
+#  define DECLARE(type, array, size)  type * array
 #  define ALLOC(type, array, size) { \
       array = (type*)fcalloc((size_t)(((size)+1L)/2), 2*sizeof(type)); \
       if (!array) xalloc_die (); \
@@ -128,7 +126,9 @@ EXTERN(uch, window);         /* Sliding window and suffix table (unlzw) */
 #define tab_suffix window
 #ifndef MAXSEG_64K
 #  define tab_prefix prev    /* hash link (see deflate.c) */
-#  define head (prev+WSIZE)  /* hash head (see deflate.c) */
+#ifndef head
+#  define headGZIP (prev+WSIZE)  /* hash head (see deflate.c) */
+#endif
    EXTERN(ush, tab_prefix);  /* prefix code (see unlzw.c) */
 #else
 #  define tab_prefix0 prev
@@ -213,14 +213,14 @@ extern int save_orig_name; /* set if original name must be saved */
  * suffix table instead of its output buffer, so it does not use put_ubyte
  * (to be cleaned up).
  */
-#define put_byte(c) {outbuf[outcnt++]=(uch)(c); if (outcnt==OUTBUFSIZ)\
+#define put_byte(c) {outbuf[outcnt++]=(uch)(c); if (outcnt==OUTBUFSIZE)\
    flush_outbuf();}
 #define put_ubyte(c) {window[outcnt++]=(uch)(c); if (outcnt==WSIZE)\
    flush_window();}
 
 /* Output a 16 bit value, lsb first */
 #define put_short(w) \
-{ if (outcnt < OUTBUFSIZ-2) { \
+{ if (outcnt < OUTBUFSIZE-2) { \
     outbuf[outcnt++] = (uch) ((w) & 0xff); \
     outbuf[outcnt++] = (uch) ((ush)(w) >> 8); \
   } else { \
@@ -283,7 +283,7 @@ extern noreturn void abort_gzip (void);
 
         /* in deflate.c */
 extern void lm_init (int pack_level);
-extern off_t deflate (int pack_level);
+extern off_t deflateGZIP (int pack_level);
 
         /* in trees.c */
 extern void ct_init     (ush *attr, int *method);
@@ -325,7 +325,7 @@ extern void display_ratio (off_t num, off_t den, FILE *file);
 extern void fprint_off    (FILE *, off_t, int);
 
         /* in inflate.c */
-extern int inflate (void);
+extern int inflateGZIP (void);
 
         /* in dfltcc.c */
 #ifdef IBM_Z_DFLTCC

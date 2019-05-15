@@ -7,6 +7,7 @@
 *.o
 *.trs
 *~
+.DS_Store
 .deps
 /GNUmakefile
 /GNUmakefile
@@ -19,11 +20,13 @@
 /gunzip
 /gzexe
 /gzip
+/src/gzip
 /gzip-*
 /lib/arg-nonnull.h
 /lib/c++defs.h
 /lib/warn-on-use.h
 /libver.a
+/src/libver.a
 /maint.mk
 /maint.mk
 /version.[ch]
@@ -41,3 +44,4 @@ ChangeLog
 Makefile
 Makefile.in
 gzip.doc.gz
+!zlib_interface_test/Makefile

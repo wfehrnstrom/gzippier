@@ -17,16 +17,86 @@
    along with this program; if not, write to the Free Software Foundation,
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.  */
 
+#include <stdio.h>
 #include <config.h>
 #include <ctype.h>
-
+#include <assert.h>
 #include "tailor.h"
 #include "gzip.h"
+#include "zlib.h"
+#include <sys/types.h>
+#include <sys/uio.h>
+#include <unistd.h>
+#include <sys/errno.h>
+#define CHUNK 16384
 
 off_t header_bytes;   /* number of bytes in gzip header */
 
 /* Speed options for the general purpose bit flag.  */
 enum { SLOW = 2, FAST = 4 };
+
+/* Deflate using zlib
+ */
+off_t deflateGZIP(int pack_level)
+{
+    // source is input file descriptor, dest is input file descriptor
+    int ret, flush;
+    unsigned have;
+    z_stream strm;
+    unsigned char in[CHUNK];
+    unsigned char out[CHUNK];
+    int source = ifd;
+    int dest = ofd;
+
+    /* allocate deflate state */
+    strm.zalloc = Z_NULL;
+    strm.zfree = Z_NULL;
+    strm.opaque = Z_NULL;
+    /* ret = deflateInit(&strm, level); */
+    ret = deflateInit2(
+            &strm, 
+            pack_level, 
+            Z_DEFLATED,         // set this for deflation to work
+            MAX_WBITS + 16,     // max window bits + 16 for gzip encoding
+            8,                  // memlevel default
+            Z_DEFAULT_STRATEGY  // strategy
+    );
+    if (ret != Z_OK)
+        return ret;
+
+    /* compress until end of file */
+    do {
+        strm.avail_in = read(source, in, CHUNK);
+        if (errno != 0) {
+            (void)deflateEnd(&strm);
+            return Z_ERRNO;
+        }
+        flush = (strm.avail_in != CHUNK) ? Z_FINISH : Z_NO_FLUSH;
+        strm.next_in = in;
+
+        /* run deflate() on input until output buffer not full, finish
+           compression if all of source has been read in */
+        do {
+            strm.avail_out = CHUNK;
+            strm.next_out = out;
+            ret = deflate(&strm, flush);    /* no bad return value */
+            assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
+            have = CHUNK - strm.avail_out;
+            if (write(dest, out, have) != have || errno != 0) {
+                (void)deflateEnd(&strm);
+                return Z_ERRNO;
+            }
+        } while (strm.avail_out == 0);
+        assert(strm.avail_in == 0);     /* all input will be used */
+
+        /* done when last data in file processed */
+    } while (flush != Z_FINISH);
+    assert(ret == Z_STREAM_END);        /* stream will be complete */
+
+    /* clean up and return */
+    (void)deflateEnd(&strm);
+    return Z_OK;
+}
 
 /* ===========================================================================
  * Deflate in to out.
@@ -93,7 +163,7 @@ int zip(in, out)
 #ifdef IBM_Z_DFLTCC
     dfltcc_deflate (level);
 #else
-    deflate (level);
+    deflateGZIP (level);
 #endif
 
 #ifndef NO_SIZE_CHECK
@@ -139,3 +209,4 @@ int file_read(buf, size)
     bytes_in += (off_t)len;
     return (int)len;
 }
+

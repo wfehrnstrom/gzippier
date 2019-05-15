@@ -80,8 +80,8 @@ gen-ChangeLog:
 	      mv $(distdir)/cl-t $(distdir)/ChangeLog; }		\
 	fi
 
-# Prepend "." to $PATH:
-new_path = PATH=.$(PATH_SEPARATOR)$$PATH
+# Prepend "." and "./lib" to $PATH:
+new_path = PATH=.$(PATH_SEPARATOR)./lib$(PATH_SEPARATOR)$$PATH
 
 # A simple test, just of gzip -- more of a sanity check than anything else.
 # AM_V_GEN signals that the command should be printed out in silent mode.
@@ -92,6 +92,7 @@ FILES_TO_CHECK = $(bin_SCRIPTS) \
 check-local: $(FILES_TO_CHECK) $(bin_PROGRAMS) gzip.doc.gz
 	$(AM_V_GEN)$(new_path); { test '$(srcdir)' != . \
 				    || zdiff gzip.doc.gz; }
+	$(AM_V_GEN)$(new_path); cp $(top_srcdir)/$(SRC)/gzip gzip
 	$(AM_V_at)$(new_path); zdiff $(top_srcdir)/gzip.doc $(top_srcdir)/gzip.doc
 	$(AM_V_at)$(new_path); zdiff $(top_srcdir)/gzip.doc gzip.doc.gz
 	$(AM_V_at)$(new_path); zdiff - $(top_srcdir)/gzip.doc <gzip.doc.gz
@@ -99,11 +100,12 @@ check-local: $(FILES_TO_CHECK) $(bin_PROGRAMS) gzip.doc.gz
 	$(AM_V_at)$(new_path); zgrep -iV >/dev/null
 	$(AM_V_at)$(new_path);				\
 	for opt in --rsyncable '' -1 -9; do		\
-          for file in $(FILES_TO_CHECK); do		\
-            gzip $$opt -c -- "$$file"			\
-              | gzip -d | cmp - "$$file" || exit 1;	\
-          done;						\
+						for file in $(FILES_TO_CHECK); do		\
+			        gzip $$opt -c -- "$$file"			\
+			          | gzip -d | cmp - "$$file" || exit 1;	\
+			      done;						\
 	done
+	$(AM_V_GEN)$(new_path)
 
 install-exec-hook: remove-installed-links
 install-exec-hook remove-installed-links:

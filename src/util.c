@@ -113,7 +113,7 @@ int copy(in, out)
     while (insize > inptr) {
         write_buf(out, (char*)inbuf + inptr, insize - inptr);
         bytes_out += insize - inptr;
-        got = read_buffer (in, (char *) inbuf, INBUFSIZ);
+        got = read_buffer (in, (char *) inbuf, INBUFSIZE);
         if (got == -1)
             read_error();
         bytes_in += got;
@@ -181,14 +181,14 @@ int fill_inbuf(eof_ok)
     /* Read as much as possible */
     insize = 0;
     do {
-        len = read_buffer (ifd, (char *) inbuf + insize, INBUFSIZ - insize);
+        len = read_buffer (ifd, (char *) inbuf + insize, INBUFSIZE- insize);
         if (len == 0) break;
         if (len == -1) {
           read_error();
           break;
         }
         insize += len;
-    } while (insize < INBUFSIZ);
+    } while (insize < INBUFSIZE);
 
     if (insize == 0) {
         if (eof_ok) return EOF;

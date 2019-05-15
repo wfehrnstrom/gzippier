@@ -236,7 +236,7 @@ static dfltcc_cc
 dfltcc_cmpr_xpnd (struct dfltcc_param_v0 *param, int fn)
 {
   uch *next_out = outbuf + outcnt;
-  size_t avail_out = OUTBUFSIZ - outcnt;
+  size_t avail_out = OUTBUFSIZE - outcnt;
   const uch *next_in = inbuf + inptr;
   size_t avail_in = insize - inptr;
   dfltcc_cc cc = dfltcc (fn | HBT_CIRCULAR, param,
@@ -246,7 +246,7 @@ dfltcc_cmpr_xpnd (struct dfltcc_param_v0 *param, int fn)
   off_t consumed_in = next_in - (inbuf + inptr);
   inptr += consumed_in;
   total_in += consumed_in;
-  outcnt += ((OUTBUFSIZ - outcnt) - avail_out);
+  outcnt += ((OUTBUFSIZE - outcnt) - avail_out);
   return cc;
 }
 
@@ -304,18 +304,18 @@ dfltcc_deflate (int pack_level)
 {
   /* Check whether we can use hardware compression.  */
   if (!is_dfltcc_enabled () || getenv ("SOURCE_DATE_EPOCH"))
-    return deflate (pack_level);
+    return deflateGZIP (pack_level);
   char const *s = getenv ("DFLTCC_LEVEL_MASK");
   unsigned long level_mask
     = s && *s ? strtoul (s, NULL, 0) : DFLTCC_LEVEL_MASK;
   if ((level_mask & (1 << pack_level)) == 0)
-    return deflate (pack_level);
+    return deflateGZIP (pack_level);
   union aligned_dfltcc_qaf_param ctx;
   dfltcc_qaf (&ctx.af);
   if (!is_bit_set (ctx.af.fns, DFLTCC_CMPR)
       || !is_bit_set (ctx.af.fns, DFLTCC_GDHT)
       || !is_bit_set (ctx.af.fmts, DFLTCC_FMT0))
-    return deflate (pack_level);
+    return deflateGZIP (pack_level);
 
   /* Initialize tuning parameters.  */
   s = getenv ("DFLTCC_BLOCK_SIZE");
@@ -333,7 +333,7 @@ dfltcc_deflate (int pack_level)
   while (true)
     {
       /* Flush the output data.  */
-      if (outcnt > OUTBUFSIZ - 8)
+      if (outcnt > OUTBUFSIZE - 8)
         flush_outbuf ();
 
       /* Close the block.  */
@@ -387,11 +387,11 @@ dfltcc_inflate (void)
 {
   /* Check whether we can use hardware decompression.  */
   if (!is_dfltcc_enabled ())
-    return inflate ();
+    return inflateGZIP ();
   union aligned_dfltcc_qaf_param ctx;
   dfltcc_qaf (&ctx.af);
   if (!is_bit_set (ctx.af.fns, DFLTCC_XPND))
-    return inflate ();
+    return inflateGZIP ();
 
   union aligned_dfltcc_param_v0 ctx_v0;
   struct dfltcc_param_v0 *param = init_param (&ctx_v0);
@@ -400,7 +400,7 @@ dfltcc_inflate (void)
   while (true)
     {
       /* Perform I/O.  */
-      if (outcnt == OUTBUFSIZ)
+      if (outcnt == OUTBUFSIZE)
         flush_outbuf ();
       if (inptr == insize)
         {

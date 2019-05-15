@@ -149,7 +149,7 @@ static int extra_blbits[BL_CODES]/* extra bits for each bit length code */
  * memory at the expense of compression). Some optimizations would be possible
  * if we rely on DIST_BUFSIZE == LIT_BUFSIZE.
  */
-#if LIT_BUFSIZE > INBUFSIZ
+#if LIT_BUFSIZE > INBUFSIZE
     error cannot overlay l_buf and inbuf
 #endif
 

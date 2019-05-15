@@ -77,7 +77,7 @@ static void make_table (int nchar, uch bitlen[],
 
 /* static uch c_len[NC]; */
 #define c_len outbuf
-#if NC > OUTBUFSIZ
+#if NC > OUTBUFSIZE
     error cannot overlay c_len and outbuf
 #endif
 

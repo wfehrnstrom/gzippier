@@ -71,7 +71,6 @@ static char const *const license_msg[] = {
 
 #include "intprops.h"
 #include "tailor.h"
-#include "gzip.h"
 #include "lzw.h"
 #include "revision.h"
 #include "timespec.h"
@@ -85,6 +84,13 @@ static char const *const license_msg[] = {
 #include "xalloc.h"
 #include "yesno.h"
 #include "version.h"
+
+// Custom LIB headers
+
+#include "zlib.h"
+
+
+#include "gzip.h"
 
 
                 /* configuration */
@@ -142,8 +148,8 @@ static char const *const license_msg[] = {
 #else
 # define BUFFER_ALIGNED /**/
 #endif
-DECLARE(uch BUFFER_ALIGNED, inbuf,  INBUFSIZ +INBUF_EXTRA);
-DECLARE(uch BUFFER_ALIGNED, outbuf, OUTBUFSIZ+OUTBUF_EXTRA);
+DECLARE(uch BUFFER_ALIGNED, inbuf,  INBUFSIZE +INBUF_EXTRA);
+DECLARE(uch BUFFER_ALIGNED, outbuf, OUTBUFSIZE+OUTBUF_EXTRA);
 DECLARE(ush, d_buf,  DIST_BUFSIZE);
 DECLARE(uch BUFFER_ALIGNED, window, 2L*WSIZE);
 #ifndef MAXSEG_64K
@@ -263,11 +269,7 @@ enum
 {
   PRESUME_INPUT_TTY_OPTION = CHAR_MAX + 1,
   RSYNCABLE_OPTION,
-  SYNCHRONOUS_OPTION,
-
-  /* A value greater than all valid long options, used as a flag to
-     distinguish options derived from the GZIP environment variable.  */
-  ENV_OPTION
+  SYNCHRONOUS_OPTION
 };
 
 static char const shortopts[] = "ab:cdfhH?klLmMnNqrS:tvVZ123456789";
@@ -437,29 +439,41 @@ progerror (char const *string)
     exit_code = ERROR;
 }
 
+static void
+suppress_exe (char* called_by_name){
+  size_t len = strlen (called_by_name);
+  if(len > 4 && strequ (called_by_name + len  - 4, ".exe"))
+    called_by_name[len - 4] = '\0';
+}
+
+static bool
+should_output_to_stdout()
+{
+  return to_stdout && !test && !list && (!decompress || !ascii);
+}
+
+static void
+treat_files(const int argc, char * const * const argv)
+{
+  if (should_output_to_stdout()) {
+      SET_BINARY_MODE (STDOUT_FILENO);
+  }
+  while (optind < argc) {
+      treat_file(argv[optind++]);
+  }
+}
+
 /* ======================================================================== */
 int
 main (int argc, char **argv)
 {
     int file_count;     /* number of files to process */
-    size_t proglen;     /* length of program_name */
-    char **argv_copy;
-    int env_argc;
-    char **env_argv;
 
     EXPAND(argc, argv); /* wild card expansion if necessary */
 
     program_name = gzip_base_name (argv[0]);
-    proglen = strlen (program_name);
-
     /* Suppress .exe for MSDOS and OS/2: */
-    if (4 < proglen && strequ (program_name + proglen - 4, ".exe"))
-      program_name[proglen - 4] = '\0';
-
-    /* Add options in GZIP environment variable if there is one */
-    argv_copy = argv;
-    env = add_envopt (&env_argc, &argv_copy, OPTIONS_VAR);
-    env_argv = env ? argv_copy : NULL;
+    suppress_exe (program_name);
 
 #ifndef GNU_STANDARD
 # define GNU_STANDARD 1
@@ -487,155 +501,106 @@ main (int argc, char **argv)
         int optc;
         int longind = -1;
 
-        if (env_argv)
-          {
-            if (env_argv[optind] && strequ (env_argv[optind], "--"))
-              optc = ENV_OPTION + '-';
-            else
-              {
-                optc = getopt_long (env_argc, env_argv, shortopts, longopts,
-                                    &longind);
-                if (0 <= optc)
-                  optc += ENV_OPTION;
-                else
-                  {
-                    if (optind != env_argc)
-                      {
-                        fprintf (stderr,
-                                 ("%s: %s: non-option in "OPTIONS_VAR
-                                  " environment variable\n"),
-                                 program_name, env_argv[optind]);
-                        try_help ();
-                      }
-
-                    /* Wait until here before warning, so that GZIP='-q'
-                       doesn't warn.  */
-                    if (env_argc != 1 && !quiet)
-                      fprintf (stderr,
-                               ("%s: warning: "OPTIONS_VAR" environment variable"
-                                " is deprecated; use an alias or script\n"),
-                               program_name);
-
-                    /* Start processing ARGC and ARGV instead.  */
-                    free (env_argv);
-                    env_argv = NULL;
-                    optind = 1;
-                    longind = -1;
-                  }
-              }
-          }
-
-        if (!env_argv)
-          optc = getopt_long (argc, argv, shortopts, longopts, &longind);
+        optc = getopt_long (argc, argv, shortopts, longopts, &longind);
         if (optc < 0)
           break;
 
         switch (optc) {
-        case 'a':
-            ascii = 1; break;
-        case 'b':
-            maxbits = atoi(optarg);
-            for (; *optarg; optarg++)
-              if (! ('0' <= *optarg && *optarg <= '9'))
+          case 'a':
+              ascii = 1; break;
+          case 'b':
+              maxbits = atoi(optarg);
+              for (; *optarg; optarg++)
+                if (! ('0' <= *optarg && *optarg <= '9'))
+                  {
+                    fprintf (stderr, "%s: -b operand is not an integer\n",
+                             program_name);
+                    try_help ();
+                  }
+              break;
+          case 'c':
+              to_stdout = 1; break;
+          case 'd':
+              decompress = 1; break;
+          case 'f':
+              force++; break;
+          case 'h': case 'H':
+              help (); finish_out (); break;
+          case 'k':
+              keep = 1; break;
+          case 'l':
+              list = decompress = to_stdout = 1; break;
+          case 'L':
+              license (); finish_out (); break;
+          case 'm': /* undocumented, may change later */
+              no_time = 1; break;
+          case 'M': /* undocumented, may change later */
+              no_time = 0; break;
+          case 'n':
+              no_name = no_time = 1; break;
+          case 'N':
+              no_name = no_time = 0; break;
+          case PRESUME_INPUT_TTY_OPTION:
+              presume_input_tty = true; break;
+          case 'q':
+              quiet = 1; verbose = 0; break;
+          case 'r':
+  #if NO_DIR
+              fprintf (stderr, "%s: -r not supported on this system\n",
+                       program_name);
+              try_help ();
+  #else
+              recursive = 1;
+  #endif
+              break;
+
+          case RSYNCABLE_OPTION:
+              rsync = 1;
+              break;
+          case 'S':
+  #ifdef NO_MULTIPLE_DOTS
+              if (*optarg == '.') optarg++;
+  #endif
+              z_len = strlen(optarg);
+              z_suffix = optarg;
+              break;
+          case SYNCHRONOUS_OPTION:
+              synchronous = true;
+              break;
+          case 't':
+              test = decompress = to_stdout = 1;
+              break;
+          case 'v':
+              verbose++; quiet = 0; break;
+          case 'V':
+              version (); finish_out (); break;
+          case 'Z':
+  #ifdef LZW
+              do_lzw = 1; break;
+  #else
+              fprintf(stderr, "%s: -Z not supported in this version\n",
+                      program_name);
+              try_help ();
+              break;
+  #endif
+          case '1':  case '2':  case '3':  case '4':
+          case '5':  case '6':  case '7':  case '8':  case '9':
+              level = optc - '0';
+              break;
+
+          default:
+              if (CHAR_MAX <= optc && optc != CHAR_MAX + '?')
                 {
-                  fprintf (stderr, "%s: -b operand is not an integer\n",
-                           program_name);
-                  try_help ();
+                  /* Output a diagnostic, since getopt_long didn't.  */
+                  fprintf (stderr, "%s: ", program_name);
+                  if (longind < 0)
+                    fprintf (stderr, "-%c: ", optc - CHAR_MAX);
+                  else
+                    fprintf (stderr, "--%s: ", longopts[longind].name);
+                  fprintf (stderr, ("option not valid in "OPTIONS_VAR
+                                    " environment variable\n"));
                 }
-            break;
-        case 'c':
-            to_stdout = 1; break;
-        case 'd':
-            decompress = 1; break;
-        case 'f':
-            force++; break;
-        case 'h': case 'H':
-            help (); finish_out (); break;
-        case 'k':
-            keep = 1; break;
-        case 'l':
-            list = decompress = to_stdout = 1; break;
-        case 'L':
-            license (); finish_out (); break;
-        case 'm': /* undocumented, may change later */
-            no_time = 1; break;
-        case 'M': /* undocumented, may change later */
-            no_time = 0; break;
-        case 'n':
-        case 'n' + ENV_OPTION:
-            no_name = no_time = 1; break;
-        case 'N':
-        case 'N' + ENV_OPTION:
-            no_name = no_time = 0; break;
-        case PRESUME_INPUT_TTY_OPTION:
-            presume_input_tty = true; break;
-        case 'q':
-        case 'q' + ENV_OPTION:
-            quiet = 1; verbose = 0; break;
-        case 'r':
-#if NO_DIR
-            fprintf (stderr, "%s: -r not supported on this system\n",
-                     program_name);
-            try_help ();
-#else
-            recursive = 1;
-#endif
-            break;
-
-        case RSYNCABLE_OPTION:
-        case RSYNCABLE_OPTION + ENV_OPTION:
-            rsync = 1;
-            break;
-        case 'S':
-#ifdef NO_MULTIPLE_DOTS
-            if (*optarg == '.') optarg++;
-#endif
-            z_len = strlen(optarg);
-            z_suffix = optarg;
-            break;
-        case SYNCHRONOUS_OPTION:
-            synchronous = true;
-            break;
-        case 't':
-            test = decompress = to_stdout = 1;
-            break;
-        case 'v':
-        case 'v' + ENV_OPTION:
-            verbose++; quiet = 0; break;
-        case 'V':
-            version (); finish_out (); break;
-        case 'Z':
-#ifdef LZW
-            do_lzw = 1; break;
-#else
-            fprintf(stderr, "%s: -Z not supported in this version\n",
-                    program_name);
-            try_help ();
-            break;
-#endif
-        case '1' + ENV_OPTION:  case '2' + ENV_OPTION:  case '3' + ENV_OPTION:
-        case '4' + ENV_OPTION:  case '5' + ENV_OPTION:  case '6' + ENV_OPTION:
-        case '7' + ENV_OPTION:  case '8' + ENV_OPTION:  case '9' + ENV_OPTION:
-            optc -= ENV_OPTION;
-            FALLTHROUGH;
-        case '1':  case '2':  case '3':  case '4':
-        case '5':  case '6':  case '7':  case '8':  case '9':
-            level = optc - '0';
-            break;
-
-        default:
-            if (ENV_OPTION <= optc && optc != ENV_OPTION + '?')
-              {
-                /* Output a diagnostic, since getopt_long didn't.  */
-                fprintf (stderr, "%s: ", program_name);
-                if (longind < 0)
-                  fprintf (stderr, "-%c: ", optc - ENV_OPTION);
-                else
-                  fprintf (stderr, "--%s: ", longopts[longind].name);
-                fprintf (stderr, ("option not valid in "OPTIONS_VAR
-                                  " environment variable\n"));
-              }
-            try_help ();
+              try_help ();
         }
     } /* loop on all arguments */
 
@@ -654,6 +619,8 @@ main (int argc, char **argv)
                 program_name);
     }
 #endif
+    // MAX_SUFFIX is a compile time limit on the length of the suffix. The GNU coding standard says
+    // that you should not have compile time limit
     if (z_len == 0 || z_len > MAX_SUFFIX) {
         fprintf(stderr, "%s: invalid suffix '%s'\n", program_name, z_suffix);
         do_exit(ERROR);
@@ -662,8 +629,8 @@ main (int argc, char **argv)
     if (do_lzw && !decompress) work = lzw;
 
     /* Allocate all global buffers (for DYN_ALLOC option) */
-    ALLOC(uch, inbuf,  INBUFSIZ +INBUF_EXTRA);
-    ALLOC(uch, outbuf, OUTBUFSIZ+OUTBUF_EXTRA);
+    ALLOC(uch, inbuf,  INBUFSIZE+INBUF_EXTRA);
+    ALLOC(uch, outbuf, OUTBUFSIZE+OUTBUF_EXTRA);
     ALLOC(ush, d_buf,  DIST_BUFSIZE);
     ALLOC(uch, window, 2L*WSIZE);
 #ifndef MAXSEG_64K
@@ -677,13 +644,8 @@ main (int argc, char **argv)
     install_signal_handlers ();
 
     /* And get to work */
-    if (file_count != 0) {
-        if (to_stdout && !test && !list && (!decompress || !ascii)) {
-            SET_BINARY_MODE (STDOUT_FILENO);
-        }
-        while (optind < argc) {
-            treat_file(argv[optind++]);
-        }
+    if (file_count > 0) {
+        treat_files(argc, argv);
     } else {  /* Standard input */
         treat_stdin();
     }
@@ -695,7 +657,7 @@ main (int argc, char **argv)
     if (list)
       {
         /* Output any totals, and check for output errors.  */
-        if (!quiet && 1 < file_count)
+        if (!quiet && file_count > 1)
           do_list (-1, -1);
         if (fflush (stdout) != 0)
           write_error ();
@@ -718,7 +680,7 @@ input_eof ()
 
   if (inptr == insize)
     {
-      if (insize != INBUFSIZ || fill_inbuf (1) == EOF)
+      if (insize != INBUFSIZE|| fill_inbuf (1) == EOF)
         return 1;
 
       /* Unget the char that fill_inbuf got.  */
@@ -889,8 +851,8 @@ atdir_set (char const *dir, ptrdiff_t dirlen)
 /* ========================================================================
  * Compress or decompress the given file
  */
-static void treat_file(iname)
-    char *iname;
+static void
+treat_file(char * iname)
 {
     /* Accept "-" as synonym for stdin */
     if (strequ(iname, "-")) {

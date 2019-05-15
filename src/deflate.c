@@ -718,124 +718,124 @@ local off_t deflate_fast()
  * evaluation for matches: a match is finally adopted only if there is
  * no better match at the next window position.
  */
-off_t
-deflateGZIP (int pack_level)
-{
-    IPos hash_head;          /* head of hash chain */
-    IPos prev_match;         /* previous match */
-    int flush = 0;           /* set if current block must be flushed */
-    int match_available = 0; /* set if previous match exists */
-    register unsigned match_length = MIN_MATCH-1; /* length of best match */
+/* off_t*/
+/* deflateGZIP (int pack_level)*/
+/* {*/
+/*     IPos hash_head;          /* head of hash chain */*/
+/*     IPos prev_match;         /* previous match */*/
+/*     int flush = 0;           /* set if current block must be flushed */*/
+/*     int match_available = 0; /* set if previous match exists */*/
+/*     register unsigned match_length = MIN_MATCH-1; /* length of best match */*/
 
-    lm_init (pack_level);
-    if (pack_level <= 3)
-      return deflate_fast();
+/*     lm_init (pack_level);*/
+/*     if (pack_level <= 3)*/
+/*       return deflate_fast();*/
 
-    /* Process the input block. */
-    while (lookahead != 0) {
-        /* Insert the string window[strstart .. strstart+2] in the
-         * dictionary, and set hash_head to the head of the hash chain:
-         */
-        INSERT_STRING(strstart, hash_head);
+/*     /* Process the input block. */*/
+/*     while (lookahead != 0) {*/
+/*         /* Insert the string window[strstart .. strstart+2] in the*/
+/*          * dictionary, and set hash_head to the head of the hash chain:*/
+/*          */*/
+/*         INSERT_STRING(strstart, hash_head);*/
 
-        /* Find the longest match, discarding those <= prev_length.
-         */
-        prev_length = match_length, prev_match = match_start;
-        match_length = MIN_MATCH-1;
+/*         /* Find the longest match, discarding those <= prev_length.*/
+/*          */*/
+/*         prev_length = match_length, prev_match = match_start;*/
+/*         match_length = MIN_MATCH-1;*/
 
-        if (hash_head != NIL && prev_length < max_lazy_match &&
-            strstart - hash_head <= MAX_DIST &&
-            strstart <= window_size - MIN_LOOKAHEAD) {
-            /* To simplify the code, we prevent matches with the string
-             * of window index 0 (in particular we have to avoid a match
-             * of the string with itself at the start of the input file).
-             */
-            match_length = longest_match (hash_head);
-            /* longest_match() sets match_start */
-            if (match_length > lookahead) match_length = lookahead;
+/*         if (hash_head != NIL && prev_length < max_lazy_match &&*/
+/*             strstart - hash_head <= MAX_DIST &&*/
+/*             strstart <= window_size - MIN_LOOKAHEAD) {*/
+/*             /* To simplify the code, we prevent matches with the string*/
+/*              * of window index 0 (in particular we have to avoid a match*/
+/*              * of the string with itself at the start of the input file).*/
+/*              */*/
+/*             match_length = longest_match (hash_head);*/
+/*             /* longest_match() sets match_start */*/
+/*             if (match_length > lookahead) match_length = lookahead;*/
 
-            /* Ignore a length 3 match if it is too distant: */
-            if (match_length == MIN_MATCH && strstart-match_start > TOO_FAR){
-                /* If prev_match is also MIN_MATCH, match_start is garbage
-                 * but we will ignore the current match anyway.
-                 */
-                match_length--;
-            }
-        }
-        /* If there was a match at the previous step and the current
-         * match is not better, output the previous match:
-         */
-        if (prev_length >= MIN_MATCH && match_length <= prev_length) {
+/*             /* Ignore a length 3 match if it is too distant: */*/
+/*             if (match_length == MIN_MATCH && strstart-match_start > TOO_FAR){*/
+/*                 /* If prev_match is also MIN_MATCH, match_start is garbage*/
+/*                  * but we will ignore the current match anyway.*/
+/*                  */*/
+/*                 match_length--;*/
+/*             }*/
+/*         }*/
+/*         /* If there was a match at the previous step and the current*/
+/*          * match is not better, output the previous match:*/
+/*          */*/
+/*         if (prev_length >= MIN_MATCH && match_length <= prev_length) {*/
 
-            check_match(strstart-1, prev_match, prev_length);
+/*             check_match(strstart-1, prev_match, prev_length);*/
 
-            flush = ct_tally(strstart-1-prev_match, prev_length - MIN_MATCH);
+/*             flush = ct_tally(strstart-1-prev_match, prev_length - MIN_MATCH);*/
 
-            /* Insert in hash table all strings up to the end of the match.
-             * strstart-1 and strstart are already inserted.
-             */
-            lookahead -= prev_length-1;
-            prev_length -= 2;
-            RSYNC_ROLL(strstart, prev_length+1);
-            do {
-                strstart++;
-                INSERT_STRING(strstart, hash_head);
-                /* strstart never exceeds WSIZE-MAX_MATCH, so there are
-                 * always MIN_MATCH bytes ahead. If lookahead < MIN_MATCH
-                 * these bytes are garbage, but it does not matter since the
-                 * next lookahead bytes will always be emitted as literals.
-                 */
-            } while (--prev_length != 0);
-            match_available = 0;
-            match_length = MIN_MATCH-1;
-            strstart++;
+/*             /* Insert in hash table all strings up to the end of the match.*/
+/*              * strstart-1 and strstart are already inserted.*/
+/*              */*/
+/*             lookahead -= prev_length-1;*/
+/*             prev_length -= 2;*/
+/*             RSYNC_ROLL(strstart, prev_length+1);*/
+/*             do {*/
+/*                 strstart++;*/
+/*                 INSERT_STRING(strstart, hash_head);*/
+/*                 /* strstart never exceeds WSIZE-MAX_MATCH, so there are*/
+/*                  * always MIN_MATCH bytes ahead. If lookahead < MIN_MATCH*/
+/*                  * these bytes are garbage, but it does not matter since the*/
+/*                  * next lookahead bytes will always be emitted as literals.*/
+/*                  */*/
+/*             } while (--prev_length != 0);*/
+/*             match_available = 0;*/
+/*             match_length = MIN_MATCH-1;*/
+/*             strstart++;*/
 
-            if (rsync && strstart > rsync_chunk_end) {
-                rsync_chunk_end = 0xFFFFFFFFUL;
-                flush = 2;
-            }
-            if (flush) FLUSH_BLOCK(0), block_start = strstart;
-        } else if (match_available) {
-            /* If there was no match at the previous position, output a
-             * single literal. If there was a match but the current match
-             * is longer, truncate the previous match to a single literal.
-             */
-            Tracevv((stderr,"%c",window[strstart-1]));
-            flush = ct_tally (0, window[strstart-1]);
-            if (rsync && strstart > rsync_chunk_end) {
-                rsync_chunk_end = 0xFFFFFFFFUL;
-                flush = 2;
-            }
-            if (flush) FLUSH_BLOCK(0), block_start = strstart;
-            RSYNC_ROLL(strstart, 1);
-            strstart++;
-            lookahead--;
-        } else {
-            /* There is no previous match to compare with, wait for
-             * the next step to decide.
-             */
-            if (rsync && strstart > rsync_chunk_end) {
-                /* Reset huffman tree */
-                rsync_chunk_end = 0xFFFFFFFFUL;
-                flush = 2;
-                FLUSH_BLOCK(0), block_start = strstart;
-            }
+/*             if (rsync && strstart > rsync_chunk_end) {*/
+/*                 rsync_chunk_end = 0xFFFFFFFFUL;*/
+/*                 flush = 2;*/
+/*             }*/
+/*             if (flush) FLUSH_BLOCK(0), block_start = strstart;*/
+/*         } else if (match_available) {*/
+/*             /* If there was no match at the previous position, output a*/
+/*              * single literal. If there was a match but the current match*/
+/*              * is longer, truncate the previous match to a single literal.*/
+/*              */*/
+/*             Tracevv((stderr,"%c",window[strstart-1]));*/
+/*             flush = ct_tally (0, window[strstart-1]);*/
+/*             if (rsync && strstart > rsync_chunk_end) {*/
+/*                 rsync_chunk_end = 0xFFFFFFFFUL;*/
+/*                 flush = 2;*/
+/*             }*/
+/*             if (flush) FLUSH_BLOCK(0), block_start = strstart;*/
+/*             RSYNC_ROLL(strstart, 1);*/
+/*             strstart++;*/
+/*             lookahead--;*/
+/*         } else {*/
+/*             /* There is no previous match to compare with, wait for*/
+/*              * the next step to decide.*/
+/*              */*/
+/*             if (rsync && strstart > rsync_chunk_end) {*/
+/*                 /* Reset huffman tree */*/
+/*                 rsync_chunk_end = 0xFFFFFFFFUL;*/
+/*                 flush = 2;*/
+/*                 FLUSH_BLOCK(0), block_start = strstart;*/
+/*             }*/
 
-            match_available = 1;
-            RSYNC_ROLL(strstart, 1);
-            strstart++;
-            lookahead--;
-        }
-        Assert (strstart <= bytes_in && lookahead <= bytes_in, "a bit too far");
+/*             match_available = 1;*/
+/*             RSYNC_ROLL(strstart, 1);*/
+/*             strstart++;*/
+/*             lookahead--;*/
+/*         }*/
+/*         Assert (strstart <= bytes_in && lookahead <= bytes_in, "a bit too far");*/
 
-        /* Make sure that we always have enough lookahead, except
-         * at the end of the input file. We need MAX_MATCH bytes
-         * for the next match, plus MIN_MATCH bytes to insert the
-         * string following the next match.
-         */
-        while (lookahead < MIN_LOOKAHEAD && !eofile) fill_window();
-    }
-    if (match_available) ct_tally (0, window[strstart-1]);
+/*         /* Make sure that we always have enough lookahead, except*/
+/*          * at the end of the input file. We need MAX_MATCH bytes*/
+/*          * for the next match, plus MIN_MATCH bytes to insert the*/
+/*          * string following the next match.*/
+/*          */*/
+/*         while (lookahead < MIN_LOOKAHEAD && !eofile) fill_window();*/
+/*     }*/
+/*     if (match_available) ct_tally (0, window[strstart-1]);*/
 
-    return FLUSH_BLOCK(1); /* eof */
-}
+/*     return FLUSH_BLOCK(1); /* eof */*/
+/* }*/

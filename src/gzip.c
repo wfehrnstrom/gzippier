@@ -446,6 +446,23 @@ suppress_exe (char* called_by_name){
     called_by_name[len - 4] = '\0';
 }
 
+static bool
+should_output_to_stdout()
+{
+  return to_stdout && !test && !list && (!decompress || !ascii);
+}
+
+static void
+treat_files(const int argc, char * const * const argv)
+{
+  if (should_output_to_stdout()) {
+      SET_BINARY_MODE (STDOUT_FILENO);
+  }
+  while (optind < argc) {
+      treat_file(argv[optind++]);
+  }
+}
+
 /* ======================================================================== */
 int
 main (int argc, char **argv)
@@ -602,6 +619,8 @@ main (int argc, char **argv)
                 program_name);
     }
 #endif
+    // MAX_SUFFIX is a compile time limit on the length of the suffix. The GNU coding standard says
+    // that you should not have compile time limit
     if (z_len == 0 || z_len > MAX_SUFFIX) {
         fprintf(stderr, "%s: invalid suffix '%s'\n", program_name, z_suffix);
         do_exit(ERROR);
@@ -625,13 +644,8 @@ main (int argc, char **argv)
     install_signal_handlers ();
 
     /* And get to work */
-    if (file_count != 0) {
-        if (to_stdout && !test && !list && (!decompress || !ascii)) {
-            SET_BINARY_MODE (STDOUT_FILENO);
-        }
-        while (optind < argc) {
-            treat_file(argv[optind++]);
-        }
+    if (file_count > 0) {
+        treat_files(argc, argv);
     } else {  /* Standard input */
         treat_stdin();
     }
@@ -643,7 +657,7 @@ main (int argc, char **argv)
     if (list)
       {
         /* Output any totals, and check for output errors.  */
-        if (!quiet && 1 < file_count)
+        if (!quiet && file_count > 1)
           do_list (-1, -1);
         if (fflush (stdout) != 0)
           write_error ();
@@ -837,8 +851,8 @@ atdir_set (char const *dir, ptrdiff_t dirlen)
 /* ========================================================================
  * Compress or decompress the given file
  */
-static void treat_file(iname)
-    char *iname;
+static void
+treat_file(char * iname)
 {
     /* Accept "-" as synonym for stdin */
     if (strequ(iname, "-")) {

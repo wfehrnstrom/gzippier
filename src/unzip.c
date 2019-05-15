@@ -29,9 +29,14 @@
  */
 
 #include <config.h>
+#include <assert.h>
 #include "tailor.h"
 #include "gzip.h"
 #include "zlib.h"
+#include <sys/types.h>
+#include <sys/uio.h>
+#include <unistd.h>
+#include <sys/errno.h>
 #define CHUNK 16384
 
 /* PKZIP header definitions */
@@ -111,6 +116,8 @@ int inflateGZIP(void)
     z_stream strm;
     unsigned char in[CHUNK];
     unsigned char out[CHUNK];
+    int source = ifd; // set to global input fd
+    int dest = ofd; // set to global output fd
 
     /* allocate inflate state */
     strm.zalloc = Z_NULL;
@@ -125,8 +132,8 @@ int inflateGZIP(void)
 
     /* decompress until deflate stream ends or end of file */
     do {
-        strm.avail_in = fread(in, 1, CHUNK, source);
-        if (ferror(source)) {
+        strm.avail_in = read(source, in, CHUNK);
+        if (errno != 0) {
             (void)inflateEnd(&strm);
             return Z_ERRNO;
         }
@@ -149,7 +156,7 @@ int inflateGZIP(void)
                 return ret;
             }
             have = CHUNK - strm.avail_out;
-            if (fwrite(out, 1, have, dest) != have || ferror(dest)) {
+            if (write(dest, out, have) != have || errno != 0) {
                 (void)inflateEnd(&strm);
                 return Z_ERRNO;
             }
@@ -195,7 +202,7 @@ int unzip(in, out)
 #ifdef IBM_Z_DFLTCC
         int res = dfltcc_inflate ();
 #else
-        int res = inflate();
+        int res = inflateGZIP();
 #endif
 
         if (res == 3) {

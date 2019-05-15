@@ -129,7 +129,7 @@ EXTERN(uch, window);         /* Sliding window and suffix table (unlzw) */
 #ifndef MAXSEG_64K
 #  define tab_prefix prev    /* hash link (see deflate.c) */
 #ifndef head
-#  define head (prev+WSIZE)  /* hash head (see deflate.c) */
+#  define headGZIP (prev+WSIZE)  /* hash head (see deflate.c) */
 #endif
    EXTERN(ush, tab_prefix);  /* prefix code (see unlzw.c) */
 #else

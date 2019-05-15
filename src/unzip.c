@@ -125,8 +125,8 @@ int inflateGZIP(void)
 
     /* decompress until deflate stream ends or end of file */
     do {
-        strm.avail_in = fread(in, 1, CHUNK, source);
-        if (ferror(source)) {
+        strm.avail_in = read(source, ifd, CHUNK);
+        if (if errno != 0) {
             (void)inflateEnd(&strm);
             return Z_ERRNO;
         }
@@ -149,7 +149,7 @@ int inflateGZIP(void)
                 return ret;
             }
             have = CHUNK - strm.avail_out;
-            if (fwrite(out, 1, have, dest) != have || ferror(dest)) {
+            if (write(dest, out, have) != have || errno != 0) {
                 (void)inflateEnd(&strm);
                 return Z_ERRNO;
             }

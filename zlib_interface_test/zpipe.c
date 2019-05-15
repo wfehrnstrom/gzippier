@@ -16,6 +16,10 @@
 #include <string.h>
 #include <assert.h>
 #include "zlib.h"
+#include <sys/types.h>
+#include <sys/uio.h>
+#include <unistd.h>
+#include <sys/errno.h>
 
 #if defined(MSDOS) || defined(OS2) || defined(WIN32) || defined(__CYGWIN__)
 #  include <fcntl.h>
@@ -33,8 +37,9 @@
    level is supplied, Z_VERSION_ERROR if the version of zlib.h and the
    version of the library linked do not match, or Z_ERRNO if there is
    an error reading or writing the files. */
-int def(FILE *source, FILE *dest, int level)
+int def(int source, int dest, int level)
 {
+    // source is input file descriptor, dest is input file descriptor
     int ret, flush;
     unsigned have;
     z_stream strm;
@@ -59,12 +64,12 @@ int def(FILE *source, FILE *dest, int level)
 
     /* compress until end of file */
     do {
-        strm.avail_in = fread(in, 1, CHUNK, source);
-        if (ferror(source)) {
+        strm.avail_in = read(source, in, CHUNK);
+        if (errno != 0) {
             (void)deflateEnd(&strm);
             return Z_ERRNO;
         }
-        flush = feof(source) ? Z_FINISH : Z_NO_FLUSH;
+        flush = (strm.avail_in != CHUNK) ? Z_FINISH : Z_NO_FLUSH;
         strm.next_in = in;
 
         /* run deflate() on input until output buffer not full, finish
@@ -75,7 +80,7 @@ int def(FILE *source, FILE *dest, int level)
             ret = deflate(&strm, flush);    /* no bad return value */
             assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
             have = CHUNK - strm.avail_out;
-            if (fwrite(out, 1, have, dest) != have || ferror(dest)) {
+            if (write(dest, out, have) != have || errno != 0) {
                 (void)deflateEnd(&strm);
                 return Z_ERRNO;
             }
@@ -97,8 +102,10 @@ int def(FILE *source, FILE *dest, int level)
    invalid or incomplete, Z_VERSION_ERROR if the version of zlib.h and
    the version of the library linked do not match, or Z_ERRNO if there
    is an error reading or writing the files. */
-int inf(FILE *source, FILE *dest)
+int inf(int source, int dest)
 {
+    // source is file descriptor of input
+    // dest is file descriptor of output
     int ret;
     unsigned have;
     z_stream strm;
@@ -118,8 +125,8 @@ int inf(FILE *source, FILE *dest)
 
     /* decompress until deflate stream ends or end of file */
     do {
-        strm.avail_in = fread(in, 1, CHUNK, source);
-        if (ferror(source)) {
+        strm.avail_in = read(source, in, CHUNK);
+        if (errno != 0) {
             (void)inflateEnd(&strm);
             return Z_ERRNO;
         }
@@ -142,7 +149,7 @@ int inf(FILE *source, FILE *dest)
                 return ret;
             }
             have = CHUNK - strm.avail_out;
-            if (fwrite(out, 1, have, dest) != have || ferror(dest)) {
+            if (write(dest, out, have) != have || errno != 0) {
                 (void)inflateEnd(&strm);
                 return Z_ERRNO;
             }
@@ -191,8 +198,10 @@ int main(int argc, char **argv)
     SET_BINARY_MODE(stdout);
 
     /* do compression if no arguments */
+    int ifd = fileno(stdin);
+    int ofd = fileno(stdout);
     if (argc == 1) {
-        ret = def(stdin, stdout, Z_DEFAULT_COMPRESSION);
+        ret = def(ifd, ofd, Z_DEFAULT_COMPRESSION);
         if (ret != Z_OK)
             zerr(ret);
         return ret;
@@ -200,7 +209,7 @@ int main(int argc, char **argv)
 
     /* do decompression if -d specified */
     else if (argc == 2 && strcmp(argv[1], "-d") == 0) {
-        ret = inf(stdin, stdout);
+        ret = inf(ifd, ofd);
         if (ret != Z_OK)
             zerr(ret);
         return ret;

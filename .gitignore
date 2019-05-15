@@ -42,3 +42,4 @@ ChangeLog
 Makefile
 Makefile.in
 gzip.doc.gz
+!zlib_interface_test/Makefile

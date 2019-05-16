@@ -126,6 +126,7 @@ int inflateGZIP(void)
     strm.avail_in = 0;
     strm.next_in = Z_NULL;
     /* ret = inflateInit(&strm); */
+    /* printf("MAX_WBITS: %d\n", MAX_WBITS); */
     ret = inflateInit2(&strm, MAX_WBITS + 16);
     if (ret != Z_OK)
         return ret;

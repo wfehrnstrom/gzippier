@@ -71,7 +71,6 @@ static char const *const license_msg[] = {
 
 #include "intprops.h"
 #include "tailor.h"
-#include "lzw.h"
 #include "revision.h"
 #include "timespec.h"
 
@@ -96,6 +95,9 @@ static char const *const license_msg[] = {
                 /* configuration */
 
 
+#ifndef BITS
+# define BITS 16
+#endif
 
 #ifndef NO_DIR
 # define NO_DIR 0
@@ -184,11 +186,9 @@ static int recursive = 0;    /* recurse through directories (-r) */
 static int list = 0;         /* list the file contents (-l) */
        int verbose = 0;      /* be verbose (-v) */
        int quiet = 0;        /* be quiet (-q) */
-static int do_lzw = 0;       /* generate output compatible with old compress (-Z) */
        int test = 0;         /* test .gz file integrity */
 static int foreground = 0;   /* set if program run in foreground */
        char *program_name;   /* program name */
-       int maxbits = BITS;   /* max bits per code for LZW */
        int method = DEFLATED;/* compression method */
        int level = 6;        /* compression level */
        int exit_code = OK;   /* program exit code */
@@ -395,10 +395,6 @@ help()
  "  -V, --version     display version number",
  "  -1, --fast        compress faster",
  "  -9, --best        compress better",
-#ifdef LZW
- "  -Z, --lzw         produce output compatible with old compress",
- "  -b, --bits=BITS   max number of bits per code (implies -Z)",
-#endif
  "",
  "With no FILE, or when FILE is -, read standard input.",
  "",
@@ -508,16 +504,6 @@ main (int argc, char **argv)
         switch (optc) {
           case 'a':
               ascii = 1; break;
-          case 'b':
-              maxbits = atoi(optarg);
-              for (; *optarg; optarg++)
-                if (! ('0' <= *optarg && *optarg <= '9'))
-                  {
-                    fprintf (stderr, "%s: -b operand is not an integer\n",
-                             program_name);
-                    try_help ();
-                  }
-              break;
           case 'c':
               to_stdout = 1; break;
           case 'd':
@@ -574,15 +560,6 @@ main (int argc, char **argv)
               verbose++; quiet = 0; break;
           case 'V':
               version (); finish_out (); break;
-          case 'Z':
-  #ifdef LZW
-              do_lzw = 1; break;
-  #else
-              fprintf(stderr, "%s: -Z not supported in this version\n",
-                      program_name);
-              try_help ();
-              break;
-  #endif
           case '1':  case '2':  case '3':  case '4':
           case '5':  case '6':  case '7':  case '8':  case '9':
               level = optc - '0';
@@ -625,8 +602,6 @@ main (int argc, char **argv)
         fprintf(stderr, "%s: invalid suffix '%s'\n", program_name, z_suffix);
         do_exit(ERROR);
     }
-
-    if (do_lzw && !decompress) work = lzw;
 
     /* Allocate all global buffers (for DYN_ALLOC option) */
     ALLOC(uch, inbuf,  INBUFSIZE+INBUF_EXTRA);
@@ -1655,16 +1630,6 @@ static int get_method(in)
         work = unpack;
         method = PACKED;
 
-    } else if (memcmp(magic, LZW_MAGIC, 2) == 0) {
-        work = unlzw;
-        method = COMPRESSED;
-        last_member = 1;
-
-    } else if (memcmp(magic, LZH_MAGIC, 2) == 0) {
-        work = unlzh;
-        method = LZHED;
-        last_member = 1;
-
     } else if (force && to_stdout && !list) { /* pass input unchanged */
         method = STORED;
         work = copy;
@@ -1719,8 +1684,7 @@ static void do_list(ifd, method)
         "store",  /* 0 */
         "compr",  /* 1 */
         "pack ",  /* 2 */
-        "lzh  ",  /* 3 */
-        "", "", "", "", /* 4 to 7 reserved */
+        "", "", "", "", "", /* 3 to 7 reserved */
         "defla"}; /* 8 */
     int positive_off_t_width = INT_STRLEN_BOUND (off_t) - 1;
 

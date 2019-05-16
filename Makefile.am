@@ -42,7 +42,7 @@ EXTRA_DIST = $(ACINCLUDE_INPUTS) $(man_MANS) \
   $(SRC)/tailor.h \
   zcat.in zcmp.in zdiff.in \
   zegrep.in zfgrep.in zforce.in zgrep.in zless.in zmore.in znew.in
-noinst_HEADERS = $(SRC)/gzip.h $(SRC)/lzw.h
+noinst_HEADERS = $(SRC)/gzip.h
 
 bin_SCRIPTS = gunzip gzexe zcat zcmp zdiff \
   zegrep zfgrep zforce zgrep zless zmore znew

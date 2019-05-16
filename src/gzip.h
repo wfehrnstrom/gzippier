@@ -275,9 +275,6 @@ extern int check_zipfile (int in);
         /* in unpack.c */
 extern int unpack     (int in, int out);
 
-        /* in unlzh.c */
-extern int unlzh      (int in, int out);
-
         /* in gzip.c */
 extern noreturn void abort_gzip (void);
 

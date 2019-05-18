@@ -920,8 +920,13 @@ treat_file(char * iname)
     clear_bufs(); /* clear input and output buffers */
     part_nb = 0;
 
+    /* unsigned char inBuf[16384]; */
+    /* int bytes_read = read(ifd, inBuf, 16384); */
+    /* printf("Bytes Read: %d\n", bytes_read); */
     if (decompress) {
+        method = DEFLATED;
         method = get_method(ifd); /* updates ofname if original given */
+        lseek(ifd, 0, SEEK_SET);
         if (method < 0) {
             close(ifd);
             return;               /* error message already emitted */

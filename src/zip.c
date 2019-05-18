@@ -52,10 +52,9 @@ off_t deflateGZIP(int pack_level)
     strm.zalloc = Z_NULL;
     strm.zfree = Z_NULL;
     strm.opaque = Z_NULL;
-    /* ret = deflateInit(&strm, level); */
     ret = deflateInit2(
-            &strm, 
-            pack_level, 
+            &strm,
+            pack_level,
             Z_DEFLATED,         // set this for deflation to work
             MAX_WBITS + 16,     // max window bits + 16 for gzip encoding
             8,                  // memlevel default
@@ -209,4 +208,3 @@ int file_read(buf, size)
     bytes_in += (off_t)len;
     return (int)len;
 }
-

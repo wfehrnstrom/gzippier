@@ -128,9 +128,10 @@ int copy(in, out)
  * pointer, then initialize the crc shift register contents instead.
  * Return the current crc in either case.
  */
-ulg updcrc(s, n)
-    const uch *s;           /* pointer to bytes to pump through */
-    unsigned n;             /* number of bytes in s[] */
+ /* s: pointer to bytes to pump through */
+ /* n: number of bytes in s[] */
+ulg
+updcrc(const uch *s, unsigned n)
 {
     register ulg c;         /* temporary variable */
 
@@ -313,8 +314,7 @@ char *strlwr(s)
  * case sensitive, force the base name to lower case.
  */
 char *
-gzip_base_name (filename)
-    char *filename;
+gzip_base_name (char* filename)
 {
     filename = last_component (filename);
     if (casemap('A') == 'a') strlwr(filename);

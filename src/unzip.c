@@ -109,7 +109,7 @@ int check_zipfile(in)
 
 /* Inflate using zlib
  */
-int inflateGZIP(void) 
+int inflateGZIP(void)
 {
     int ret;
     unsigned have;
@@ -153,12 +153,12 @@ int inflateGZIP(void)
             ret = inflate(&strm, Z_NO_FLUSH);
             assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
             switch (ret) {
-            case Z_NEED_DICT:
-                ret = Z_DATA_ERROR;     /* and fall through */
-            case Z_DATA_ERROR:
-            case Z_MEM_ERROR:
-                (void)inflateEnd(&strm);
-                return ret;
+              case Z_NEED_DICT:
+                  ret = Z_DATA_ERROR;     /* and fall through */
+              case Z_DATA_ERROR:
+              case Z_MEM_ERROR:
+                  (void)inflateEnd(&strm);
+                  return ret;
             }
             have = CHUNK - strm.avail_out;
             if (write(dest, out, have) != have || errno != 0) {
@@ -224,4 +224,3 @@ int unzip(in, out)
 
     return OK;
 }
-

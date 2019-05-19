@@ -139,7 +139,6 @@ int inflateGZIP(void)
             return Z_ERRNO;
         }
         if (strm.avail_in == 0) {
-            /* printf("avail_in is 0\n"); */
             break;
         }
         strm.next_in = in;

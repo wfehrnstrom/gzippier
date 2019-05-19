@@ -133,10 +133,7 @@ int inflateGZIP(void)
 
     /* decompress until deflate stream ends or end of file */
     do {
-        printf("READING\n");
-        int bytes_read = read(source, in, CHUNK);
-        printf("BYTES READ: %d\n", bytes_read);
-        strm.avail_in = bytes_read;
+        strm.avail_in = read(source, in, CHUNK);
         if (errno != 0) {
             (void)inflateEnd(&strm);
             return Z_ERRNO;

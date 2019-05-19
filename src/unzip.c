@@ -138,9 +138,10 @@ int inflateGZIP(void)
             (void)inflateEnd(&strm);
             return Z_ERRNO;
         }
-        if (strm.avail_in == 0)
-            printf("HERE\n");
+        if (strm.avail_in == 0) {
+            /* printf("avail_in is 0\n"); */
             break;
+        }
         strm.next_in = in;
 
         /* run inflate() on input until output buffer not full */
@@ -158,20 +159,18 @@ int inflateGZIP(void)
                   return ret;
             }
             have = CHUNK - strm.avail_out;
-            if (write(dest, out, have) != have || errno != 0) {
+            int bytes_written = write(dest, out, have);
+            if (bytes_written != have || errno != 0) {
                 (void)inflateEnd(&strm);
                 return Z_ERRNO;
             }
         } while (strm.avail_out == 0);
-
         /* done when inflate() says it's done */
     } while (ret != Z_STREAM_END);
 
     /* clean up and return */
     (void)inflateEnd(&strm);
-    printf("ret = %d\n", ret);
     int result = ret == Z_STREAM_END ? Z_OK : Z_DATA_ERROR;
-    printf("result = %d\n", result);
     return result;
 }
 
@@ -185,21 +184,8 @@ int inflateGZIP(void)
 int unzip(in, out)
     int in, out;   /* input and output file descriptors */
 {
-    /* ulg orig_crc = 0;       /1* original crc *1/ */
-    /* ulg orig_len = 0;       /1* original uncompressed length *1/ */
-    /* int n; */
-    /* uch buf[EXTHDR];        /1* extended local header *1/ */
-    /* int err = OK; */
-
     ifd = in;
     ofd = out;
-
-    /* updcrc(NULL, 0);           /1* initialize crc *1/ */
-
-    /* if (pkzip && !ext_header) {  /1* crc and length at the end otherwise *1/ */
-    /*     orig_crc = LG(inbuf + LOCCRC); */
-    /*     orig_len = LG(inbuf + LOCLEN); */
-    /* } */
 
     /* Decompress */
     if (method == DEFLATED)  {

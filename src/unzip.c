@@ -46,14 +46,15 @@
 #define  EXTFLG 8               /*  bit for extended local header */
 #define LOCHOW 8                /* offset of compression method */
 /* #define LOCTIM 10               UNUSED file mod time (for decryption) */
-#define LOCCRC 14               /* offset of crc */
-#define LOCSIZ 18               /* offset of compressed size */
-#define LOCLEN 22               /* offset of uncompressed length */
+/* #define LOCCRC 14               UNUSED offset of crc */
+/* #define LOCSIZ 18               UNUSED offset of compressed size */
+/* #define LOCLEN 22               UNUSED offset of uncompressed length */
 #define LOCFIL 26               /* offset of file name field length */
 #define LOCEXT 28               /* offset of extra field length */
 #define LOCHDR 30               /* size of local header, including sig */
-#define EXTHDR 16               /* size of extended local header, inc sig */
-#define RAND_HEAD_LEN  12       /* length of encryption random header */
+/* #define EXTHDR 16               UNUSED size of extended local header,
+                                   inc sig */
+/* #define RAND_HEAD_LEN  12       UNUSED length of encryption random header */
 
 
 /* Globals */
@@ -151,7 +152,8 @@ int inflateGZIP(void)
             assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
             switch (ret) {
               case Z_NEED_DICT:
-                  ret = Z_DATA_ERROR;     /* and fall through */
+                  ret = Z_DATA_ERROR;
+                  FALLTHROUGH;
               case Z_DATA_ERROR:
               case Z_MEM_ERROR:
                   (void)inflateEnd(&strm);

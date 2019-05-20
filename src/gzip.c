@@ -195,10 +195,11 @@ static int foreground = 0;   /* set if program run in foreground */
        int save_orig_name;   /* set if original name must be saved */
 static int last_member;      /* set for .zip and .Z files */
 static int part_nb;          /* number of parts in .gz file */
-       off_t ifile_size;      /* input file size, -1 for devices (debug only) */
+       off_t ifile_size;     /* input file size, -1 for devices (debug only) */
 static char *env;            /* contents of GZIP env variable */
 static char const *z_suffix; /* default suffix (can be set with --suffix) */
 static size_t z_len;         /* strlen(z_suffix) */
+       int threads = 0;      /* no parallel if defaults threads=0 */
 
 /* The original timestamp (modification time).  If the original is
    unknown, TIME_STAMP.tv_nsec is negative.  If the original is
@@ -272,7 +273,7 @@ enum
   SYNCHRONOUS_OPTION
 };
 
-static char const shortopts[] = "ab:cdfhH?klLmMnNqrS:tvVZ123456789";
+static char const shortopts[] = "ab:cdfhH?j:klLmMnNqrS:tvVZ123456789";
 
 static const struct option longopts[] =
 {
@@ -311,6 +312,7 @@ static const struct option longopts[] =
     {"lzw",        0, NULL, 'Z'}, /* make output compatible with old compress */
     {"bits",       1, NULL, 'b'}, /* max number of bits per code (implies -Z) */
     {"rsyncable",  0, NULL, RSYNCABLE_OPTION}, /* make rsync-friendly archive */
+    {"parallel",   1, NULL, 'j'}, /* parallel compression */
     { 0, 0, 0, 0 }
 };
 
@@ -368,24 +370,24 @@ help()
 #if O_BINARY
  "  -a, --ascii       ascii text; convert end-of-line using local conventions",
 #endif
- "  -c, --stdout      write on standard output, keep original files unchanged",
- "  -d, --decompress  decompress",
-/*  -e, --encrypt     encrypt */
- "  -f, --force       force overwrite of output file and compress links",
- "  -h, --help        give this help",
-/*  -k, --pkzip       force output in pkzip format */
- "  -k, --keep        keep (don't delete) input files",
- "  -l, --list        list compressed file contents",
- "  -L, --license     display software license",
+ "  -c, --stdout           write on standard output, keep original files unchanged",
+ "  -d, --decompress       decompress",
+/*  -e, --encrypt          encrypt */
+ "  -f, --force            force overwrite of output file and compress links",
+ "  -h, --help             give this help",
+/*  -k, --pkzip            force output in pkzip format */
+ "  -k, --keep             keep (don't delete) input files",
+ "  -l, --list             list compressed file contents",
+ "  -L, --license          display software license",
 #ifdef UNDOCUMENTED
- "  -m                do not save or restore the original modification time",
- "  -M, --time        save or restore the original modification time",
+ "  -m                     do not save or restore the original modification time",
+ "  -M, --time             save or restore the original modification time",
 #endif
- "  -n, --no-name     do not save or restore the original name and timestamp",
- "  -N, --name        save or restore the original name and timestamp",
- "  -q, --quiet       suppress all warnings",
+ "  -n, --no-name          do not save or restore the original name and timestamp",
+ "  -N, --name             save or restore the original name and timestamp",
+ "  -q, --quiet            suppress all warnings",
 #if ! NO_DIR
- "  -r, --recursive   operate recursively on directories",
+ "  -r, --recursive        operate recursively on directories",
 #endif
  "      --rsyncable   make rsync-friendly archive",
  "  -S, --suffix=SUF  use suffix SUF on compressed files",
@@ -395,6 +397,7 @@ help()
  "  -V, --version     display version number",
  "  -1, --fast        compress faster",
  "  -9, --best        compress better",
+ "  -j, --parallel=THREADS compress in parallel with THREADS number of threads",
  "",
  "With no FILE, or when FILE is -, read standard input.",
  "",
@@ -564,7 +567,23 @@ main (int argc, char **argv)
           case '5':  case '6':  case '7':  case '8':  case '9':
               level = optc - '0';
               break;
+          case 'j':
+        	    threads = atoi(optarg);
+                    for (; *optarg; optarg++)
+                      if (! ('0' <= *optarg && *optarg <= '9'))
+                        {
+                          fprintf (stderr, "%s: -j operand is not an integer\n",
+                                   program_name);
+                          try_help ();
+                        }
 
+                    if (! (threads > 0))
+                      {
+        		fprintf (stderr, "%s: -j operand is not a positive integer\n",
+                                 program_name);
+                        try_help ();
+                      }
+                    break;
           default:
               if (CHAR_MAX <= optc && optc != CHAR_MAX + '?')
                 {

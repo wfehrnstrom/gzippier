@@ -125,8 +125,6 @@ int inflateGZIP(void)
     strm.opaque = Z_NULL;
     strm.avail_in = 0;
     strm.next_in = Z_NULL;
-    /* ret = inflateInit(&strm); */
-    /* printf("MAX_WBITS: %d\n", MAX_WBITS); */
     ret = inflateInit2(&strm, MAX_WBITS + 16);
     if (ret != Z_OK)
         return ret;
@@ -148,6 +146,14 @@ int inflateGZIP(void)
             strm.avail_out = CHUNK;
             strm.next_out = out;
             ret = inflate(&strm, Z_NO_FLUSH);
+            /* We need this line for a nasty side effect:
+             * inptr must be set to the end of the input buffer for
+             * input_eof to recognize that
+             * we've processed all of the gzipped input.
+             * TODO: remove this side effect dependent code by removing
+             * branching on inptr.
+             */
+            inptr = strm.total_in;
             assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
             switch (ret) {
               case Z_NEED_DICT:

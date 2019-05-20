@@ -17,8 +17,9 @@
 
 CLEANFILES =
 BUILT_SOURCES =
+DEBUG_FLAGS = -g -O0
 AM_CPPFLAGS = -I$(top_srcdir)/lib
-AM_CFLAGS = $(WARN_CFLAGS) $(WERROR_CFLAGS)
+AM_CFLAGS = $(WARN_CFLAGS) $(WERROR_CFLAGS) $(DEBUG_FLAGS)
 
 # Tell the linker to omit references to unused shared libraries.
 AM_LDFLAGS = $(IGNORE_USED_LIBRARIES_CFLAGS)
@@ -52,3 +53,9 @@ version.h: Makefile
 	$(AM_V_at)printf 'extern char const *Version;\n' > $@t
 	$(AM_V_at)chmod a-w $@t
 	$(AM_V_at)mv $@t $@
+
+BUILT_SOURCES += $(top_srcdir)/.version
+$(top_srcdir)/.version:
+	echo $(VERSION) > $@-t && mv $@-t $@
+dist-hook:
+	echo $(VERSION) > $(distdir)/.tarball-version

@@ -655,7 +655,7 @@ input_eof ()
 
   if (inptr == insize)
     {
-      if (insize != INBUFSIZE|| fill_inbuf (1) == EOF)
+      if (insize != INBUFSIZE || fill_inbuf (1) == EOF)
         return 1;
 
       /* Unget the char that fill_inbuf got.  */
@@ -920,11 +920,7 @@ treat_file(char * iname)
     clear_bufs(); /* clear input and output buffers */
     part_nb = 0;
 
-    /* unsigned char inBuf[16384]; */
-    /* int bytes_read = read(ifd, inBuf, 16384); */
-    /* printf("Bytes Read: %d\n", bytes_read); */
     if (decompress) {
-        method = DEFLATED;
         method = get_method(ifd); /* updates ofname if original given */
         lseek(ifd, 0, SEEK_SET);
         if (method < 0) {
@@ -1638,6 +1634,16 @@ str_end(char* str, void (*on_each_letter)(char* p)){
       watch_file_name_length(p);
   }
 }
+
+static int
+ignore_trailing_null_bytes(int imagic1)
+{
+  int inbyte;
+  for (inbyte = imagic1; inbyte == 0; inbyte = try_byte ())
+    continue;
+  return inbyte;
+}
+
 /* ========================================================================
  * Check the magic number of the input file and update ofname if an
  * original name was given and to_stdout is not set.
@@ -1682,6 +1688,7 @@ get_method(int in)
             FREE(h);
             return encrypted_file_error();
         }
+
         if (bitmap_contains(h->flags, RESERVED)) {
             int no_continue = reserved_flags_used_error(h->flags);
             if(no_continue != 0){
@@ -1763,7 +1770,6 @@ get_method(int in)
         }
     }
     if (method >= 0) return method;
-
     if (part_nb == 1) {
         fprintf (stderr, "\n%s: %s: not in gzip format\n",
                  program_name, ifname);
@@ -1773,9 +1779,7 @@ get_method(int in)
     } else {
         if (h->magic[0] == 0)
           {
-            int inbyte;
-            for (inbyte = h->imagic1;  inbyte == 0;  inbyte = try_byte ())
-              continue;
+            int inbyte = ignore_trailing_null_bytes(h->imagic1);
             if (inbyte == EOF)
               {
                 if (verbose)

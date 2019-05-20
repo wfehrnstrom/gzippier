@@ -443,7 +443,7 @@ suppress_exe (char* called_by_name){
 }
 
 static bool
-should_output_to_stdout()
+should_output_to_stdout(void)
 {
   return to_stdout && !test && !list && (!decompress || !ascii);
 }
@@ -1506,7 +1506,7 @@ set_gzip_time_stamp(ulg stamp, struct timespec* ts)
 }
 
 static ulg
-read_time_stamp_from_file()
+read_time_stamp_from_file(void)
 {
   ulg stamp  = (ulg)get_byte();
   stamp |= ((ulg)get_byte()) << 8;
@@ -1536,7 +1536,7 @@ is_pack_format(magic_header* h)
 }
 
 static bool
-is_stored_format()
+is_stored_format(void)
 {
   return (force && to_stdout && !list);
 }
@@ -1548,7 +1548,7 @@ bitmap_contains(uch bitmap, uch code)
 }
 
 static int
-unknown_decompression_method_error()
+unknown_decompression_method_error(void)
 {
   fprintf(stderr,
           "%s: %s: unknown method %d -- not supported\n",
@@ -1558,7 +1558,7 @@ unknown_decompression_method_error()
 }
 
 static int
-encrypted_file_error()
+encrypted_file_error(void)
 {
   fprintf(stderr,
           "%s: %s is encrypted -- not supported\n",

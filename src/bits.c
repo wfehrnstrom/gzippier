@@ -69,7 +69,7 @@
 #include "gzip.h"
 
 #ifdef DEBUG
-#  include <stdio.h>
+# include <stdio.h>
 #endif
 
 /* ===========================================================================
@@ -103,21 +103,22 @@ int (*read_buf) (char *buf, unsigned size);
 /* ===========================================================================
  * Initialize the bit string routines.
  */
-void bi_init (zipfile)
-    file_t zipfile; /* output zip file, NO_FILE for in-memory compression */
+void
+bi_init (file_t zipfile)
 {
-    zfile  = zipfile;
-    bi_buf = 0;
-    bi_valid = 0;
+  zfile  = zipfile;
+  bi_buf = 0;
+  bi_valid = 0;
 #ifdef DEBUG
-    bits_sent = 0L;
+  bits_sent = 0L;
 #endif
 
-    /* Set the defaults for file compression. They are set by memcompress
-     * for in-memory compression.
-     */
-    if (zfile != NO_FILE) {
-        read_buf  = file_read;
+  /* Set the defaults for file compression. They are set by memcompress
+   * for in-memory compression.
+   */
+  if (zfile != NO_FILE)
+    {
+      read_buf  = file_read;
     }
 }
 
@@ -125,27 +126,29 @@ void bi_init (zipfile)
  * Send a value on a given number of bits.
  * IN assertion: length <= 16 and value fits in length bits.
  */
-void send_bits(value, length)
-    int value;  /* value to send */
-    int length; /* number of bits */
+void
+send_bits (int value, int length)
 {
 #ifdef DEBUG
-    Tracev((stderr," l %2d v %4x ", length, value));
-    Assert(length > 0 && length <= 15, "invalid length");
-    bits_sent += (off_t)length;
+  Tracev ((stderr," l %2d v %4x ", length, value));
+  Assert (length > 0 && length <= 15, "invalid length");
+  bits_sent += (off_t)length;
 #endif
-    /* If not enough room in bi_buf, use (valid) bits from bi_buf and
-     * (16 - bi_valid) bits from value, leaving (width - (16-bi_valid))
-     * unused bits in value.
-     */
-    if (bi_valid > (int)Buf_size - length) {
-        bi_buf |= (value << bi_valid);
-        put_short(bi_buf);
-        bi_buf = (ush)value >> (Buf_size - bi_valid);
-        bi_valid += length - Buf_size;
-    } else {
-        bi_buf |= value << bi_valid;
-        bi_valid += length;
+  /* If not enough room in bi_buf, use (valid) bits from bi_buf and
+   * (16 - bi_valid) bits from value, leaving (width - (16-bi_valid))
+   * unused bits in value.
+   */
+  if (bi_valid > (int)Buf_size - length)
+    {
+      bi_buf |= (value << bi_valid);
+      put_short (bi_buf);
+      bi_buf = (ush)value >> (Buf_size - bi_valid);
+      bi_valid += length - Buf_size;
+    }
+  else
+    {
+      bi_buf |= value << bi_valid;
+      bi_valid += length;
     }
 }
 
@@ -154,57 +157,62 @@ void send_bits(value, length)
  * method would use a table)
  * IN assertion: 1 <= len <= 15
  */
-unsigned bi_reverse(code, len)
-    unsigned code; /* the value to invert */
-    int len;       /* its bit length */
+unsigned
+bi_reverse (unsigned code, int len)
 {
-    register unsigned res = 0;
-    do {
-        res |= code & 1;
-        code >>= 1, res <<= 1;
+  register unsigned res = 0;
+  do
+    {
+      res |= code & 1;
+      code >>= 1, res <<= 1;
     } while (--len > 0);
-    return res >> 1;
+  return res >> 1;
 }
 
 /* ===========================================================================
  * Write out any remaining bits in an incomplete byte.
  */
-void bi_windup()
+void
+bi_windup ()
 {
-    if (bi_valid > 8) {
-        put_short(bi_buf);
-    } else if (bi_valid > 0) {
-        put_byte(bi_buf);
+  if (bi_valid > 8)
+    {
+      put_short (bi_buf);
     }
-    bi_buf = 0;
-    bi_valid = 0;
+  else if (bi_valid > 0)
+    {
+      put_byte (bi_buf);
+    }
+  bi_buf = 0;
+  bi_valid = 0;
 #ifdef DEBUG
-    bits_sent = (bits_sent+7) & ~7;
+  bits_sent = (bits_sent+7) & ~7;
 #endif
 }
 
 /* ===========================================================================
  * Copy a stored block to the zip file, storing first the length and its
- * one's complement if requested.
+ * one's complement if requested.  header is true if block header must be
+ * written.
  */
-void copy_block(buf, len, header)
-    char     *buf;    /* the input data */
-    unsigned len;     /* its length */
-    int      header;  /* true if block header must be written */
+void
+copy_block(char *buf, unsigned len, int header)
 {
-    bi_windup();              /* align on byte boundary */
+  bi_windup ();              /* align on byte boundary */
 
-    if (header) {
-        put_short((ush)len);
-        put_short((ush)~len);
+  if (header)
+    {
+      put_short ((ush)len);
+      put_short ((ush)~len);
 #ifdef DEBUG
-        bits_sent += 2*16;
+      bits_sent += 2*16;
 #endif
     }
 #ifdef DEBUG
-    bits_sent += (off_t)len<<3;
+  bits_sent += (off_t)len<<3;
 #endif
-    while (len--) {
-        put_byte(*buf++);
+  while (len--)
+    {
+      put_byte (*buf++);
     }
 }

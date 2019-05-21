@@ -357,9 +357,9 @@ try_help ()
 
 /* ======================================================================== */
 static void
-help()
+help (void)
 {
-    static char const* const help_msg[] = {
+  static char const* const help_msg[] = {
  "Compress or uncompress FILEs (by default, compress FILES in-place).",
  "",
  "Mandatory arguments to long options are mandatory for short options too.",
@@ -399,63 +399,66 @@ help()
  "",
  "Report bugs to <bug-gzip@gnu.org>.",
   0};
-    char const *const *p = help_msg;
+  char const *const *p = help_msg;
 
-    printf ("Usage: %s [OPTION]... [FILE]...\n", program_name);
-    while (*p) printf ("%s\n", *p++);
+  printf ("Usage: %s [OPTION]... [FILE]...\n", program_name);
+  while (*p) printf ("%s\n", *p++);
 }
 
 /* ======================================================================== */
 static void
-license()
+license (void)
 {
-    char const *const *p = license_msg;
+  char const *const *p = license_msg;
 
-    printf ("%s %s\n", program_name, Version);
-    while (*p) printf ("%s\n", *p++);
+  printf ("%s %s\n", program_name, Version);
+  while (*p) printf ("%s\n", *p++);
 }
 
 /* ======================================================================== */
 static void
-version()
+version (void)
 {
-    license ();
-    printf ("\n");
-    printf ("Written by Jean-loup Gailly.\n");
+  license ();
+  printf ("\n");
+  printf ("Written by Jean-loup Gailly.\n");
 }
 
 static void
 progerror (char const *string)
 {
-    int e = errno;
-    fprintf (stderr, "%s: ", program_name);
-    errno = e;
-    perror(string);
-    exit_code = ERROR;
+  int e = errno;
+  fprintf (stderr, "%s: ", program_name);
+  errno = e;
+  perror (string);
+  exit_code = ERROR;
 }
 
 static void
-suppress_exe (char* called_by_name){
+suppress_exe (char* called_by_name)
+{
   size_t len = strlen (called_by_name);
   if(len > 4 && strequ (called_by_name + len  - 4, ".exe"))
     called_by_name[len - 4] = '\0';
 }
 
 static bool
-should_output_to_stdout ()
+should_output_to_stdout (void)
 {
   return to_stdout && !test && !list && (!decompress || !ascii);
 }
 
 static void
-treat_files(const int argc, char * const * const argv)
+treat_files (const int argc, char * const * const argv)
 {
-  if (should_output_to_stdout()) {
+  if (should_output_to_stdout ())
+    {
       SET_BINARY_MODE (STDOUT_FILENO);
-  }
-  while (optind < argc) {
-      treat_file(argv[optind++]);
-  }
+    }
+  while (optind < argc)
+    {
+      treat_file (argv[optind++]);
+    }
 }
 
 /* ======================================================================== */
@@ -647,7 +650,7 @@ main (int argc, char **argv)
 
 /* Return nonzero when at end of file on input.  */
 static int
-input_eof ()
+input_eof (void)
 {
   if (!decompress || last_member)
     return 1;
@@ -665,7 +668,7 @@ input_eof ()
 }
 
 static void
-get_input_size_and_time ()
+get_input_size_and_time (void)
 {
   ifile_size = -1;
   time_stamp.tv_nsec = -1;
@@ -690,7 +693,8 @@ static void treat_stdin (void)
 {
     if (!force && !list
         && (presume_input_tty
-            || isatty (decompress ? STDIN_FILENO : STDOUT_FILENO))) {
+            || isatty (decompress ? STDIN_FILENO : STDOUT_FILENO)))
+      {
         /* Do not send compressed data to the terminal or read it from
          * the terminal. We get here when user invoked the program
          * without parameters, so be helpful. According to the GNU standards:
@@ -715,14 +719,16 @@ static void treat_stdin (void)
         do_exit(ERROR);
     }
 
-    if (decompress || !ascii) {
-      SET_BINARY_MODE (STDIN_FILENO);
-    }
-    if (!test && !list && (!decompress || !ascii)) {
-      SET_BINARY_MODE (STDOUT_FILENO);
-    }
-    strcpy(ifname, "stdin");
-    strcpy(ofname, "stdout");
+    if (decompress || !ascii)
+      {
+        SET_BINARY_MODE (STDIN_FILENO);
+      }
+    if (!test && !list && (!decompress || !ascii))
+      {
+        SET_BINARY_MODE (STDOUT_FILENO);
+      }
+    strcpy (ifname, "stdin");
+    strcpy (ofname, "stdout");
 
     /* Get the file's timestamp and size.  */
     if (fstat (STDIN_FILENO, &istat) != 0)
@@ -733,7 +739,7 @@ static void treat_stdin (void)
 
     get_input_size_and_time ();
 
-    clear_bufs(); /* clear input and output buffers */
+    clear_bufs (); /* clear input and output buffers */
     to_stdout = 1;
     part_nb = 0;
     ifd = STDIN_FILENO;
@@ -826,7 +832,7 @@ atdir_set (char const *dir, ptrdiff_t dirlen)
  * Compress or decompress the given file
  */
 static void
-treat_file(char * iname)
+treat_file (char * iname)
 {
     /* Accept "-" as synonym for stdin */
     if (strequ(iname, "-")) {
@@ -1131,8 +1137,8 @@ static int create_outfile (void)
  * .??z suffix as indicating a compressed file; some people use .xyz
  * to denote volume data.
  */
-static char *get_suffix(name)
-    char *name;
+static char
+*get_suffix (char *name)
 {
     int nlen, slen;
     char suffix[MAX_SUFFIX+3]; /* last chars of name, forced to lower case */
@@ -1247,9 +1253,7 @@ open_and_stat (char *name, int flags, struct stat *st)
  * Return an open file descriptor or -1.
  */
 static int
-open_input_file (iname, sbuf)
-    char *iname;
-    struct stat *sbuf;
+open_input_file (char *iname, struct stat *sbuf)
 {
     int ilen;  /* strlen(ifname) */
     int z_suffix_errno = 0;
@@ -1346,7 +1350,8 @@ open_input_file (iname, sbuf)
  * Generate ofname given ifname. Return OK, or WARNING if file must be skipped.
  * Sets save_orig_name to true if the file name has been truncated.
  */
-static int make_ofname (void)
+static int
+make_ofname (void)
 {
     char *suff;            /* ofname z suffix */
 
@@ -1427,9 +1432,7 @@ static int make_ofname (void)
    zero byte if NBYTES == (size_t) -1.  If FLAGS say that the header
    CRC should be computed, update the CRC accordingly.  */
 static void
-discard_input_bytes (nbytes, flags)
-    size_t nbytes;
-    unsigned int flags;
+discard_input_bytes (size_t nbytes, unsigned int flags)
 {
   while (nbytes != 0)
     {
@@ -1447,7 +1450,7 @@ discard_input_bytes (nbytes, flags)
  * premature end of file: use try_byte instead of get_byte.
  */
 static void
-set_magic_header_type(magic_header* h)
+set_magic_header_type (magic_header* h)
 {
   if (force && to_stdout) {
       h->imagic0 = try_byte();
@@ -1469,7 +1472,7 @@ set_magic_header_type(magic_header* h)
 }
 
 static void
-set_magic_header_data(magic_header* h, ulg time_stamp)
+set_magic_header_data (magic_header* h, ulg time_stamp)
 {
   h->magic[8] = get_byte ();  /* Ignore extra flags.  */
   h->magic[9] = get_byte ();  /* Ignore OS type.  */
@@ -1488,7 +1491,7 @@ set_magic_header_data(magic_header* h, ulg time_stamp)
 }
 
 static void
-set_gzip_time_stamp(ulg stamp, struct timespec* ts)
+set_gzip_time_stamp (ulg stamp, struct timespec* ts)
 {
   if (stamp != 0 && !no_time)
     {
@@ -1509,7 +1512,7 @@ set_gzip_time_stamp(ulg stamp, struct timespec* ts)
 }
 
 static ulg
-read_time_stamp_from_file ()
+read_time_stamp_from_file (void)
 {
   ulg stamp  = (ulg)get_byte();
   stamp |= ((ulg)get_byte()) << 8;
@@ -1519,27 +1522,27 @@ read_time_stamp_from_file ()
 }
 
 static bool
-is_gzip_format(magic_header* h)
+is_gzip_format (magic_header* h)
 {
   return (memcmp(h->magic, GZIP_MAGIC, 2) == 0
     || memcmp(h->magic, OLD_GZIP_MAGIC, 2) == 0);
 }
 
 static bool
-is_pkzip_format(magic_header* h, unsigned inptr, uch *inbuf)
+is_pkzip_format (magic_header* h, unsigned inptr, uch *inbuf)
 {
   return (memcmp(h->magic, PKZIP_MAGIC, 2) == 0 && inptr == 2
           && memcmp((char*)inbuf, PKZIP_MAGIC, 4) == 0);
 }
 
 static bool
-is_pack_format(magic_header* h)
+is_pack_format (magic_header* h)
 {
   return !memcmp(h->magic, PACK_MAGIC, 2);
 }
 
 static bool
-is_stored_format ()
+is_stored_format (void)
 {
   return (force && to_stdout && !list);
 }
@@ -1551,21 +1554,21 @@ bitmap_contains(uch bitmap, uch code)
 }
 
 static int
-unknown_decompression_method_error ()
+unknown_decompression_method_error (void)
 {
-  fprintf(stderr,
-          "%s: %s: unknown method %d -- not supported\n",
-          program_name, ifname, method);
+  fprintf (stderr,
+           "%s: %s: unknown method %d -- not supported\n",
+           program_name, ifname, method);
   exit_code = ERROR;
   return -1;
 }
 
 static int
-encrypted_file_error ()
+encrypted_file_error (void)
 {
-  fprintf(stderr,
-          "%s: %s is encrypted -- not supported\n",
-          program_name, ifname);
+  fprintf (stderr,
+           "%s: %s is encrypted -- not supported\n",
+           program_name, ifname);
   exit_code = ERROR;
   return -1;
 }
@@ -1575,40 +1578,40 @@ encrypted_file_error ()
  * decompressed, otherwise, we hope for the best and continue.
  */
 static int
-reserved_flags_used_error(uch flags)
+reserved_flags_used_error (uch flags)
 {
-  fprintf(stderr,
-          "%s: %s has flags 0x%x -- not supported\n",
-          program_name, ifname, flags);
+  fprintf (stderr,
+           "%s: %s has flags 0x%x -- not supported\n",
+           program_name, ifname, flags);
   exit_code = ERROR;
   if (force <= 1) return -1;
-  else{
-    return 0;
-  }
+  return 0;
 }
 
 static void
-discard_extra_header_fields(uch flags)
+discard_extra_header_fields (uch flags)
 {
   uch lenbuf[2];
   unsigned int len = lenbuf[0] = get_byte ();
   len |= (lenbuf[1] = get_byte ()) << 8;
-  if (verbose) {
-      fprintf(stderr,"%s: %s: extra field of %u bytes ignored\n",
-              program_name, ifname, len);
-  }
+  if (verbose)
+    {
+      fprintf (stderr,"%s: %s: extra field of %u bytes ignored\n",
+               program_name, ifname, len);
+    }
   if (bitmap_contains(flags, HEADER_CRC))
     updcrc (lenbuf, 2);
   discard_input_bytes (len, flags);
 }
 
 static int
-crc_header_check(uch *magic)
+crc_header_check (uch *magic)
 {
   unsigned int crc16 = updcrc (magic, 0) & 0xffff;
   unsigned int header16 = get_byte ();
   header16 |= ((unsigned int) get_byte ()) << 8;
-  if (header16 != crc16){
+  if (header16 != crc16)
+    {
       fprintf (stderr,
                "%s: %s: header checksum 0x%04x != computed checksum 0x%04x\n",
                program_name, ifname, header16, crc16);
@@ -1616,26 +1619,29 @@ crc_header_check(uch *magic)
       if (force <= 1){
         return -1;
       }
-  }
+    }
   return 0;
 }
 
 static void
-watch_file_name_length(char* p)
+watch_file_name_length (char* p)
 {
-  if (p >= ofname+sizeof(ofname)) {
+  if (p >= ofname+sizeof(ofname))
+    {
       gzip_error ("corrupted input -- file name too large");
-  }
+    }
 }
 
 static char*
-str_end(char* str, void (*on_each_letter)(char* p)){
+str_end (char* str, void (*on_each_letter)(char* p))
+{
   char *p = str;
-  for (;;) {
+  for (;;)
+    {
       *p = (char) get_byte ();
       if (*p++ == '\0') return p;
       watch_file_name_length(p);
-  }
+    }
 }
 /* ========================================================================
  * Check the magic number of the input file and update ofname if an
@@ -1650,7 +1656,7 @@ str_end(char* str, void (*on_each_letter)(char* p)){
  */
  /* int in: input file descriptor */
 static int
-get_method(int in)
+get_method (int in)
 {
     // uch flags;     /* compression flags */
     // uch magic[10]; /* magic header */
@@ -1798,9 +1804,7 @@ get_method(int in)
  * If the given method is < 0, display the accumulated totals.
  * IN assertions: time_stamp, header_bytes and ifile_size are initialized.
  */
-static void do_list(ifd, method)
-    int ifd;     /* input file descriptor */
-    int method;  /* compression method */
+static void do_list (int ifd, int method)
 {
     ulg crc;  /* original crc */
     static int first_time = 1;
@@ -1905,8 +1909,7 @@ static void do_list(ifd, method)
  *
  * IN assertion: for compression, the suffix of the given name is z_suffix.
  */
-static void shorten_name(name)
-    char *name;
+static void shorten_name (char *name)
 {
     int len;                 /* length of name without z_suffix */
     char *trunc = NULL;      /* character to be truncated */
@@ -1963,7 +1966,7 @@ static void shorten_name(name)
  * The compressed file already exists, so ask for confirmation.
  * Return ERROR if the file must be skipped.
  */
-static int check_ofname()
+static int check_ofname (void)
 {
     /* Ask permission to overwrite the existing file */
     if (!force) {
@@ -2010,8 +2013,7 @@ do_chown (int fd, char const *name, uid_t uid, gid_t gid)
  * Copy modes, times, ownership from input file to output file.
  * IN assertion: to_stdout is false.
  */
-static void copy_stat(ifstat)
-    struct stat *ifstat;
+static void copy_stat (struct stat *ifstat)
 {
     mode_t mode = ifstat->st_mode & S_IRWXUGO;
     int r;
@@ -2075,9 +2077,7 @@ static void copy_stat(ifstat)
 /* ========================================================================
  * Recurse through the given directory.
  */
-static void treat_dir (fd, dir)
-    int fd;
-    char *dir;
+static void treat_dir (int fd, char *dir)
 {
     DIR      *dirp;
     char     nbuf[MAX_PATH_LEN];
@@ -2155,8 +2155,7 @@ install_signal_handlers (void)
 /* ========================================================================
  * Free all dynamically allocated variables and exit with the given code.
  */
-static void do_exit(exitcode)
-    int exitcode;
+static void do_exit (int exitcode)
 {
     static int in_exit = 0;
 
@@ -2212,7 +2211,7 @@ remove_output_file (bool signals_already_blocked)
  * Error handler.
  */
 void
-abort_gzip ()
+abort_gzip (void)
 {
    remove_output_file (false);
    do_exit(ERROR);

@@ -134,8 +134,6 @@ if test "$gl_gcc_warnings" = yes; then
   nw="$nw -Wmissing-format-attribute" # copy.c
   nw="$nw -Wunsafe-loop-optimizations" # a few src/*.c
   nw="$nw -Winline"                 # system.h's readdir_ignoring_dot_and_dotdot
-  # Things that we disable in transitioning to C99:
-  nw="$nw -Wstrict-prototypes"
 
   # Warnings that gzip runs afoul of but coreutils does not.
   nw="$nw -Wold-style-definition"

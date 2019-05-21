@@ -117,9 +117,7 @@ bi_init (file_t zipfile)
    * for in-memory compression.
    */
   if (zfile != NO_FILE)
-    {
-      read_buf  = file_read;
-    }
+    read_buf  = file_read;
 }
 
 /* ===========================================================================
@@ -165,7 +163,8 @@ bi_reverse (unsigned code, int len)
     {
       res |= code & 1;
       code >>= 1, res <<= 1;
-    } while (--len > 0);
+    }
+  while (--len > 0);
   return res >> 1;
 }
 
@@ -173,7 +172,7 @@ bi_reverse (unsigned code, int len)
  * Write out any remaining bits in an incomplete byte.
  */
 void
-bi_windup ()
+bi_windup (void)
 {
   if (bi_valid > 8)
     {
@@ -196,7 +195,7 @@ bi_windup ()
  * written.
  */
 void
-copy_block(char *buf, unsigned len, int header)
+copy_block (char *buf, unsigned len, int header)
 {
   bi_windup ();              /* align on byte boundary */
 
@@ -212,7 +211,5 @@ copy_block(char *buf, unsigned len, int header)
   bits_sent += (off_t)len<<3;
 #endif
   while (len--)
-    {
-      put_byte (*buf++);
-    }
+    put_byte (*buf++);
 }

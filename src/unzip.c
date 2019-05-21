@@ -175,9 +175,11 @@ inflateGZIP (void)
               (void)inflateEnd(&strm);
               return Z_ERRNO;
             }
-        } while (strm.avail_out == 0);
+        }
+      while (strm.avail_out == 0);
       /* done when inflate() says it's done */
-    } while (ret != Z_STREAM_END);
+    }
+  while (ret != Z_STREAM_END);
 
   /* clean up and return */
   (void) inflateEnd (&strm);

@@ -58,8 +58,7 @@ deflateGZIP (int pack_level)
                       Z_DEFLATED,     // set this for deflation to work
                       MAX_WBITS + 16, // max window bits + 16 for gzip encoding
                       8,              // memlevel default
-                      Z_DEFAULT_STRATEGY
-                      );
+                      Z_DEFAULT_STRATEGY);
   if (ret != Z_OK)
     return ret;
 
@@ -89,11 +88,13 @@ deflateGZIP (int pack_level)
               (void)deflateEnd (&strm);
               return Z_ERRNO;
             }
-        } while (strm.avail_out == 0);
+        }
+      while (strm.avail_out == 0);
       assert (strm.avail_in == 0);     /* all input will be used */
 
       /* done when last data in file processed */
-    } while (flush != Z_FINISH);
+    }
+  while (flush != Z_FINISH);
   assert (ret == Z_STREAM_END);        /* stream will be complete */
 
   /* clean up and return */
@@ -107,7 +108,7 @@ deflateGZIP (int pack_level)
  *   The variables time_stamp and save_orig_name are initialized.
  */
 int
-zip(int in, int out)
+zip (int in, int out)
 {
     /* uch  flags = 0;         /1* general purpose bit flags *1/ */
     /* ush  attr = 0;          /1* ascii/binary flag *1/ */
@@ -195,18 +196,17 @@ zip(int in, int out)
  * IN assertion: size >= 2 (for end-of-line translation)
  */
 int
-file_read(char *buf, unsigned size)
+file_read (char *buf, unsigned size)
 {
   unsigned len;
 
   Assert (insize == 0, "inbuf not empty");
 
   len = read_buffer (ifd, buf, size);
-  if (len == 0) return (int)len;
+  if (len == 0)
+    return (int)len;
   if (len == (unsigned)-1)
-    {
-      read_error();
-    }
+    read_error();
 
   updcrc ((uch *) buf, len);
   bytes_in += (off_t)len;

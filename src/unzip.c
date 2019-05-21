@@ -136,6 +136,8 @@ inflateGZIP (void)
   if (ret != Z_OK)
     return ret;
 
+  errno = 0;
+
   /* decompress until deflate stream ends or end of file */
   do
     {

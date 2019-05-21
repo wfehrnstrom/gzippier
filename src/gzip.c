@@ -88,7 +88,6 @@ static char const *const license_msg[] = {
 
 #include "zlib.h"
 
-
 #include "gzip.h"
 
 
@@ -1059,7 +1058,8 @@ volatile_strcpy (char volatile *dst, char const volatile *src)
  *   ofname has already been updated if there was an original name.
  * OUT assertions: ifd and ofd are closed in case of error.
  */
-static int create_outfile (void)
+static int
+create_outfile (void)
 {
   int name_shortened = 0;
   int flags = (O_WRONLY | O_CREAT | O_EXCL

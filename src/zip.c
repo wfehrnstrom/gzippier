@@ -62,6 +62,8 @@ deflateGZIP (int pack_level)
   if (ret != Z_OK)
     return ret;
 
+  errno = 0;
+
   /* compress until end of file */
   do
     {
@@ -117,6 +119,7 @@ zip (int in, int out)
 
   ifd = in;
   ofd = out;
+
     /* outcnt = 0; */
 
     /* Write the header to the gzip file. See algorithm.doc for the format */

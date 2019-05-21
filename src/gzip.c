@@ -315,12 +315,11 @@ static const struct option longopts[] =
 };
 
 /* local functions */
-// local just means static. static has multiple meanings
 static noreturn void try_help (void);
 static void help         (void);
 static void license      (void);
 static void version      (void);
-static int input_eof	(void);
+static int input_eof	 (void);
 static void treat_stdin  (void);
 static void treat_file   (char *iname);
 static int create_outfile (void);
@@ -443,7 +442,7 @@ suppress_exe (char* called_by_name){
 }
 
 static bool
-should_output_to_stdout (void)
+should_output_to_stdout ()
 {
   return to_stdout && !test && !list && (!decompress || !ascii);
 }
@@ -666,7 +665,7 @@ input_eof ()
 }
 
 static void
-get_input_size_and_time (void)
+get_input_size_and_time ()
 {
   ifile_size = -1;
   time_stamp.tv_nsec = -1;
@@ -687,7 +686,7 @@ get_input_size_and_time (void)
 /* ========================================================================
  * Compress or decompress stdin
  */
-static void treat_stdin()
+static void treat_stdin (void)
 {
     if (!force && !list
         && (presume_input_tty
@@ -1054,7 +1053,7 @@ volatile_strcpy (char volatile *dst, char const volatile *src)
  *   ofname has already been updated if there was an original name.
  * OUT assertions: ifd and ofd are closed in case of error.
  */
-static int create_outfile()
+static int create_outfile (void)
 {
   int name_shortened = 0;
   int flags = (O_WRONLY | O_CREAT | O_EXCL
@@ -1347,7 +1346,7 @@ open_input_file (iname, sbuf)
  * Generate ofname given ifname. Return OK, or WARNING if file must be skipped.
  * Sets save_orig_name to true if the file name has been truncated.
  */
-static int make_ofname()
+static int make_ofname (void)
 {
     char *suff;            /* ofname z suffix */
 
@@ -1510,7 +1509,7 @@ set_gzip_time_stamp(ulg stamp, struct timespec* ts)
 }
 
 static ulg
-read_time_stamp_from_file (void)
+read_time_stamp_from_file ()
 {
   ulg stamp  = (ulg)get_byte();
   stamp |= ((ulg)get_byte()) << 8;
@@ -1540,7 +1539,7 @@ is_pack_format(magic_header* h)
 }
 
 static bool
-is_stored_format (void)
+is_stored_format ()
 {
   return (force && to_stdout && !list);
 }
@@ -1552,7 +1551,7 @@ bitmap_contains(uch bitmap, uch code)
 }
 
 static int
-unknown_decompression_method_error (void)
+unknown_decompression_method_error ()
 {
   fprintf(stderr,
           "%s: %s: unknown method %d -- not supported\n",
@@ -1562,7 +1561,7 @@ unknown_decompression_method_error (void)
 }
 
 static int
-encrypted_file_error (void)
+encrypted_file_error ()
 {
   fprintf(stderr,
           "%s: %s is encrypted -- not supported\n",
@@ -2126,7 +2125,7 @@ static void treat_dir (fd, dir)
 /* Make sure signals get handled properly.  */
 
 static void
-install_signal_handlers ()
+install_signal_handlers (void)
 {
   int nsigs = sizeof handled_sig / sizeof handled_sig[0];
   int i;
@@ -2213,7 +2212,7 @@ remove_output_file (bool signals_already_blocked)
  * Error handler.
  */
 void
-abort_gzip (void)
+abort_gzip ()
 {
    remove_output_file (false);
    do_exit(ERROR);

@@ -1,0 +1,4 @@
+Disable strict prototype warnings
+
+This warning gets promoted to an error and complains about functions
+with no parameters that do not explicitly accept void.

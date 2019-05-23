@@ -1,6 +1,10 @@
 #!/bin/sh
 
 
+echo "Generating input file..."
+head -c 10000000 /dev/urandom >input.txt
+
+
 input=$(wc -c input.txt | sed 's/  */ /g' | cut -d " " -f 2)
 
 printf "Input file size: $input\n"
@@ -19,7 +23,7 @@ lzma_dec=()
 printf "\nCompressed file size in bytes:\n"
 printf "\tgzip\tbzip2\tlzma\n"
 rm *.lzma *.gzip *bzip2 2>/dev/null 
-cp original.txt input.txt
+#cp original.txt input.txt
 for i in `seq 1 9`;
 do
  	
@@ -71,6 +75,7 @@ do
 done  
 
 rm *.lzma *.gzip *bzip2 2>/dev/null 
+rm input.txt
 
 
  #if we're doing this, then we'll always need a compressed size, dec_size... * 3.  great.

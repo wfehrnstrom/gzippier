@@ -1,6 +1,6 @@
 [submodule "gnulib"]
         path = gnulib
         url = git://git.sv.gnu.org/gnulib.git
-[submodule "lib/zlib"]
+[submodule "zlib"]
         path = lib/zlib
         url = https://github.com/madler/zlib

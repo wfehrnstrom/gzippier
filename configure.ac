@@ -25,6 +25,11 @@ AC_CONFIG_SRCDIR([src/gzip.c])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([lib/config.h:lib/config.hin])
+if test -f "$srcdir/lib/zlib/configure"; then
+   echo "Configuring zlib..."
+   cd "$srcdir/lib/zlib" && ./configure | sed 's/^/  /' && cd "../.."
+   echo "Done."
+fi
 AM_INIT_AUTOMAKE([1.11 subdir-objects dist-xz dist-zip
                   color-tests parallel-tests])
 AM_SILENT_RULES([yes]) # make --enable-silent-rules the default.

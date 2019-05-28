@@ -25,6 +25,7 @@ AC_CONFIG_SRCDIR([src/gzip.c])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([lib/config.h:lib/config.hin])
+AM_CONDITIONAL([ZLIB_MAKEFILE], [test -f "$srcdir/lib/zlib/Makefile"])
 if test -f "$srcdir/lib/zlib/configure"; then
    echo "Configuring zlib..."
    cd "$srcdir/lib/zlib" && ./configure | sed 's/^/  /' && cd "../.."

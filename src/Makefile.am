@@ -17,7 +17,7 @@
 
 CLEANFILES =
 BUILT_SOURCES =
-AM_CPPFLAGS = -I$(top_srcdir)/lib
+AM_CPPFLAGS = -I$(top_srcdir)/lib/zlib
 AM_CFLAGS = $(WARN_CFLAGS) $(WERROR_CFLAGS)
 
 # Tell the linker to omit references to unused shared libraries.
@@ -26,7 +26,7 @@ AM_LDFLAGS = $(IGNORE_USED_LIBRARIES_CFLAGS)
 noinst_LIBRARIES = libver.a
 nodist_libver_a_SOURCES = version.c version.h
 
-gzip_LDADD = libver.a ../lib/libz.a ../lib/libgzip.a
+gzip_LDADD = libver.a ../lib/zlib/libz.a ../lib/libgzip.a
 gzip_LDADD += $(LIB_CLOCK_GETTIME)
 
 bin_PROGRAMS = gzip

@@ -70,7 +70,11 @@ off_t deflateGZIP(int pack_level)
             (void)deflateEnd(&strm);
             return Z_ERRNO;
         }
-        flush = (strm.avail_in != CHUNK) ? Z_FINISH : Z_NO_FLUSH;
+        if (rsync == true) {
+            flush = (strm.avail_in != CHUNK) ? Z_FINISH : Z_FULL_FLUSH;
+        } else {
+            flush = (strm.avail_in != CHUNK) ? Z_FINISH : Z_NO_FLUSH;
+        }
         strm.next_in = in;
 
         /* run deflate() on input until output buffer not full, finish

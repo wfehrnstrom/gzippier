@@ -368,13 +368,14 @@ help()
  "Mandatory arguments to long options are mandatory for short options too.",
  "",
 #if O_BINARY
- "  -a, --ascii       ascii text; convert end-of-line using local conventions",
+ "  -a, --ascii            ascii text; convert end-of-line using local conventions",
 #endif
  "  -c, --stdout           write on standard output, keep original files unchanged",
  "  -d, --decompress       decompress",
 /*  -e, --encrypt          encrypt */
  "  -f, --force            force overwrite of output file and compress links",
  "  -h, --help             give this help",
+ "  -j, --parallel=THREADS compress in parallel with THREADS number of threads",
 /*  -k, --pkzip            force output in pkzip format */
  "  -k, --keep             keep (don't delete) input files",
  "  -l, --list             list compressed file contents",
@@ -389,15 +390,14 @@ help()
 #if ! NO_DIR
  "  -r, --recursive        operate recursively on directories",
 #endif
- "      --rsyncable   make rsync-friendly archive",
- "  -S, --suffix=SUF  use suffix SUF on compressed files",
- "      --synchronous synchronous output (safer if system crashes, but slower)",
- "  -t, --test        test compressed file integrity",
- "  -v, --verbose     verbose mode",
- "  -V, --version     display version number",
- "  -1, --fast        compress faster",
- "  -9, --best        compress better",
- "  -j, --parallel=THREADS compress in parallel with THREADS number of threads",
+ "      --rsyncable        make rsync-friendly archive",
+ "  -S, --suffix=SUF       use suffix SUF on compressed files",
+ "      --synchronous      synchronous output (safer if system crashes, but slower)",
+ "  -t, --test             test compressed file integrity",
+ "  -v, --verbose          verbose mode",
+ "  -V, --version          display version number",
+ "  -1, --fast             compress faster",
+ "  -9, --best             compress better",
  "",
  "With no FILE, or when FILE is -, read standard input.",
  "",

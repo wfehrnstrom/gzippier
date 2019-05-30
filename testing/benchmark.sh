@@ -1,17 +1,28 @@
 #!/bin/bash
 
-# Usage: ./benchmark [<prog>...]
-
 nbytes=1000000
+candidates=(gzip bzip2 lzma)
+
+while getopts 's:' OPTION
+do
+    case "$OPTION" in
+    s)
+        nbytes="$OPTARG"
+        ;;
+    ?)
+        echo "Usage $0 [-s <nbytes>]"
+        exit 1
+        ;;
+    esac
+done
 
 
 printf "Input file size: $nbytes\n"
 head -c $nbytes /dev/urandom >input
 
-# Fill progs with all programs from the command-line arguments that can be
-# located on this system.
+# Fill progs with all programs that can be located on the system.
 progs=()
-for prog in "$@"
+for prog in "${candidates[@]}"
 do
     if [[ $(command -v $prog) ]]
     then

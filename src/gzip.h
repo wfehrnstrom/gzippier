@@ -39,11 +39,20 @@
 #include <time.h>
 #include <string.h>
 #include <stdnoreturn.h>
+#include <stdbool.h>
 #define memzero(s, n) memset ((voidp)(s), 0, (n))
 
 typedef unsigned char  uch;
 typedef unsigned short ush;
 typedef unsigned long  ulg;
+
+typedef struct magic_header {
+  uch flags;
+  uch magic[10];
+  int imagic0;
+  int imagic1;
+  ulg stamp;
+} magic_header;
 
 /* Return codes from gzip */
 #define OK      0
@@ -205,8 +214,8 @@ extern int test;           /* check .z file integrity */
 extern int to_stdout;      /* output to stdout (-c) */
 extern int save_orig_name; /* set if original name must be saved */
 
-#define get_byte()  (inptr < insize ? inbuf[inptr++] : fill_inbuf(0))
-#define try_byte()  (inptr < insize ? inbuf[inptr++] : fill_inbuf(1))
+#define get_byte()  (inptr < insize ? inbuf[inptr++] : fill_inbuf(false))
+#define try_byte()  (inptr < insize ? inbuf[inptr++] : fill_inbuf(true))
 
 /* put_byte is used for the compressed output, put_ubyte for the
  * uncompressed output. However unlzw() uses window for its
@@ -274,9 +283,6 @@ extern int check_zipfile (int in);
 
         /* in unpack.c */
 extern int unpack     (int in, int out);
-
-        /* in unlzh.c */
-extern int unlzh      (int in, int out);
 
         /* in gzip.c */
 extern noreturn void abort_gzip (void);

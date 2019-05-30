@@ -71,7 +71,6 @@ static char const *const license_msg[] = {
 
 #include "intprops.h"
 #include "tailor.h"
-#include "lzw.h"
 #include "revision.h"
 #include "timespec.h"
 
@@ -96,6 +95,9 @@ static char const *const license_msg[] = {
                 /* configuration */
 
 
+#ifndef BITS
+# define BITS 16
+#endif
 
 #ifndef NO_DIR
 # define NO_DIR 0
@@ -184,11 +186,9 @@ static int recursive = 0;    /* recurse through directories (-r) */
 static int list = 0;         /* list the file contents (-l) */
        int verbose = 0;      /* be verbose (-v) */
        int quiet = 0;        /* be quiet (-q) */
-static int do_lzw = 0;       /* generate output compatible with old compress (-Z) */
        int test = 0;         /* test .gz file integrity */
 static int foreground = 0;   /* set if program run in foreground */
        char *program_name;   /* program name */
-       int maxbits = BITS;   /* max bits per code for LZW */
        int method = DEFLATED;/* compression method */
        int level = 6;        /* compression level */
        int exit_code = OK;   /* program exit code */
@@ -368,13 +368,14 @@ help()
  "Mandatory arguments to long options are mandatory for short options too.",
  "",
 #if O_BINARY
- "  -a, --ascii       ascii text; convert end-of-line using local conventions",
+ "  -a, --ascii            ascii text; convert end-of-line using local conventions",
 #endif
  "  -c, --stdout           write on standard output, keep original files unchanged",
  "  -d, --decompress       decompress",
 /*  -e, --encrypt          encrypt */
  "  -f, --force            force overwrite of output file and compress links",
  "  -h, --help             give this help",
+ "  -j, --parallel=THREADS compress in parallel with THREADS number of threads",
 /*  -k, --pkzip            force output in pkzip format */
  "  -k, --keep             keep (don't delete) input files",
  "  -l, --list             list compressed file contents",
@@ -397,11 +398,6 @@ help()
  "  -V, --version          display version number",
  "  -1, --fast             compress faster",
  "  -9, --best             compress better",
-#ifdef LZW
- "  -Z, --lzw              produce output compatible with old compress",
- "  -b, --bits=BITS        max number of bits per code (implies -Z)",
-#endif
- "  -j, --parallel=THREADS compress in parallel with THREADS number of threads",
  "",
  "With no FILE, or when FILE is -, read standard input.",
  "",
@@ -450,7 +446,7 @@ suppress_exe (char* called_by_name){
 }
 
 static bool
-should_output_to_stdout()
+should_output_to_stdout(void)
 {
   return to_stdout && !test && !list && (!decompress || !ascii);
 }
@@ -511,16 +507,6 @@ main (int argc, char **argv)
         switch (optc) {
           case 'a':
               ascii = 1; break;
-          case 'b':
-              maxbits = atoi(optarg);
-              for (; *optarg; optarg++)
-                if (! ('0' <= *optarg && *optarg <= '9'))
-                  {
-                    fprintf (stderr, "%s: -b operand is not an integer\n",
-                             program_name);
-                    try_help ();
-                  }
-              break;
           case 'c':
               to_stdout = 1; break;
           case 'd':
@@ -577,15 +563,6 @@ main (int argc, char **argv)
               verbose++; quiet = 0; break;
           case 'V':
               version (); finish_out (); break;
-          case 'Z':
-  #ifdef LZW
-              do_lzw = 1; break;
-  #else
-              fprintf(stderr, "%s: -Z not supported in this version\n",
-                      program_name);
-              try_help ();
-              break;
-  #endif
           case '1':  case '2':  case '3':  case '4':
           case '5':  case '6':  case '7':  case '8':  case '9':
               level = optc - '0';
@@ -645,8 +622,6 @@ main (int argc, char **argv)
         do_exit(ERROR);
     }
 
-    if (do_lzw && !decompress) work = lzw;
-
     /* Allocate all global buffers (for DYN_ALLOC option) */
     ALLOC(uch, inbuf,  INBUFSIZE+INBUF_EXTRA);
     ALLOC(uch, outbuf, OUTBUFSIZE+OUTBUF_EXTRA);
@@ -699,7 +674,7 @@ input_eof ()
 
   if (inptr == insize)
     {
-      if (insize != INBUFSIZE|| fill_inbuf (1) == EOF)
+      if (insize != INBUFSIZE || fill_inbuf (1) == EOF)
         return 1;
 
       /* Unget the char that fill_inbuf got.  */
@@ -966,6 +941,7 @@ treat_file(char * iname)
 
     if (decompress) {
         method = get_method(ifd); /* updates ofname if original given */
+        lseek(ifd, 0, SEEK_SET);
         if (method < 0) {
             close(ifd);
             return;               /* error message already emitted */
@@ -1483,6 +1459,210 @@ discard_input_bytes (nbytes, flags)
     }
 }
 
+/* If --force and --stdout, zcat == cat, so do not complain about
+ * premature end of file: use try_byte instead of get_byte.
+ */
+static void
+set_magic_header_type(magic_header* h)
+{
+  if (force && to_stdout) {
+      h->imagic0 = try_byte();
+      h->magic[0] = h->imagic0;
+      h->imagic1 = try_byte ();
+      h->magic[1] = h->imagic1;
+      /* If try_byte returned EOF, magic[1] == (char) EOF.  */
+  } else {
+      h->magic[0] = get_byte ();
+      h->imagic0 = 0;
+      if (h->magic[0]) {
+          h->magic[1] = get_byte ();
+          h->imagic1 = 0; /* avoid lint warning */
+      } else {
+          h->imagic1 = try_byte ();
+          h->magic[1] = h->imagic1;
+      }
+  }
+}
+
+static void
+set_magic_header_data(magic_header* h, ulg time_stamp)
+{
+  h->magic[8] = get_byte ();  /* Ignore extra flags.  */
+  h->magic[9] = get_byte ();  /* Ignore OS type.  */
+
+  if (h->flags & HEADER_CRC)
+    {
+      h->magic[2] = DEFLATED;
+      h->magic[3] = h->flags;
+      h->magic[4] = time_stamp & 0xff;
+      h->magic[5] = (time_stamp >> 8) & 0xff;
+      h->magic[6] = (time_stamp >> 16) & 0xff;
+      h->magic[7] = time_stamp >> 24;
+      updcrc (NULL, 0);
+      updcrc (h->magic, 10);
+    }
+}
+
+static void
+set_gzip_time_stamp(ulg stamp, struct timespec* ts)
+{
+  if (stamp != 0 && !no_time)
+    {
+      if (stamp <= TYPE_MAXIMUM (time_t))
+        {
+          time_stamp.tv_sec = stamp;
+          time_stamp.tv_nsec = 0;
+        }
+      else
+        {
+          WARN ((stderr,
+                 "%s: %s: MTIME %lu out of range for this platform\n",
+                 program_name, ifname, stamp));
+          time_stamp.tv_sec = TYPE_MAXIMUM (time_t);
+          time_stamp.tv_nsec = TIMESPEC_RESOLUTION - 1;
+        }
+    }
+}
+
+static ulg
+read_time_stamp_from_file(void)
+{
+  ulg stamp  = (ulg)get_byte();
+  stamp |= ((ulg)get_byte()) << 8;
+  stamp |= ((ulg)get_byte()) << 16;
+  stamp |= ((ulg)get_byte()) << 24;
+  return stamp;
+}
+
+static bool
+is_gzip_format(magic_header* h)
+{
+  return (memcmp(h->magic, GZIP_MAGIC, 2) == 0
+    || memcmp(h->magic, OLD_GZIP_MAGIC, 2) == 0);
+}
+
+static bool
+is_pkzip_format(magic_header* h, unsigned inptr, uch *inbuf)
+{
+  return (memcmp(h->magic, PKZIP_MAGIC, 2) == 0 && inptr == 2
+          && memcmp((char*)inbuf, PKZIP_MAGIC, 4) == 0);
+}
+
+static bool
+is_pack_format(magic_header* h)
+{
+  return !memcmp(h->magic, PACK_MAGIC, 2);
+}
+
+static bool
+is_stored_format(void)
+{
+  return (force && to_stdout && !list);
+}
+
+static bool
+bitmap_contains(uch bitmap, uch code)
+{
+  return (bitmap & code);
+}
+
+static int
+unknown_decompression_method_error(void)
+{
+  fprintf(stderr,
+          "%s: %s: unknown method %d -- not supported\n",
+          program_name, ifname, method);
+  exit_code = ERROR;
+  return -1;
+}
+
+static int
+encrypted_file_error(void)
+{
+  fprintf(stderr,
+          "%s: %s is encrypted -- not supported\n",
+          program_name, ifname);
+  exit_code = ERROR;
+  return -1;
+}
+
+/*
+ * reserved_flags_used throws -1 if the user is not forcing the file to be
+ * decompressed, otherwise, we hope for the best and continue.
+ */
+static int
+reserved_flags_used_error(uch flags)
+{
+  fprintf(stderr,
+          "%s: %s has flags 0x%x -- not supported\n",
+          program_name, ifname, flags);
+  exit_code = ERROR;
+  if (force <= 1) return -1;
+  else{
+    return 0;
+  }
+}
+
+static void
+discard_extra_header_fields(uch flags)
+{
+  uch lenbuf[2];
+  unsigned int len = lenbuf[0] = get_byte ();
+  len |= (lenbuf[1] = get_byte ()) << 8;
+  if (verbose) {
+      fprintf(stderr,"%s: %s: extra field of %u bytes ignored\n",
+              program_name, ifname, len);
+  }
+  if (bitmap_contains(flags, HEADER_CRC))
+    updcrc (lenbuf, 2);
+  discard_input_bytes (len, flags);
+}
+
+static int
+crc_header_check(uch *magic)
+{
+  unsigned int crc16 = updcrc (magic, 0) & 0xffff;
+  unsigned int header16 = get_byte ();
+  header16 |= ((unsigned int) get_byte ()) << 8;
+  if (header16 != crc16){
+      fprintf (stderr,
+               "%s: %s: header checksum 0x%04x != computed checksum 0x%04x\n",
+               program_name, ifname, header16, crc16);
+      exit_code = ERROR;
+      if (force <= 1){
+        return -1;
+      }
+  }
+  return 0;
+}
+
+static void
+watch_file_name_length(char* p)
+{
+  if (p >= ofname+sizeof(ofname)) {
+      gzip_error ("corrupted input -- file name too large");
+  }
+}
+
+static char*
+str_end(char* str, void (*on_each_letter)(char* p)){
+  char *p = str;
+  for (;;) {
+      *p = (char) get_byte ();
+      if (*p++ == '\0') return p;
+      watch_file_name_length(p);
+  }
+}
+
+static int
+ignore_trailing_null_bytes(int imagic1)
+{
+  int inbyte;
+  for (inbyte = imagic1; inbyte == 0; inbyte = try_byte ())
+    continue;
+  return inbyte;
+}
+
 /* ========================================================================
  * Check the magic number of the input file and update ofname if an
  * original name was given and to_stdout is not set.
@@ -1494,138 +1674,70 @@ discard_input_bytes (nbytes, flags)
  * IN assertions: there is at least one remaining compressed member.
  *   If the member is a zip file, it must be the only one.
  */
-static int get_method(in)
-    int in;        /* input file descriptor */
+ /* int in: input file descriptor */
+static int
+get_method(int in)
 {
-    uch flags;     /* compression flags */
-    uch magic[10]; /* magic header */
-    int imagic0;   /* first magic byte or EOF */
-    int imagic1;   /* like magic[1], but can represent EOF */
-    ulg stamp;     /* timestamp */
-
-    /* If --force and --stdout, zcat == cat, so do not complain about
-     * premature end of file: use try_byte instead of get_byte.
-     */
-    if (force && to_stdout) {
-        imagic0 = try_byte();
-        magic[0] = imagic0;
-        imagic1 = try_byte ();
-        magic[1] = imagic1;
-        /* If try_byte returned EOF, magic[1] == (char) EOF.  */
-    } else {
-        magic[0] = get_byte ();
-        imagic0 = 0;
-        if (magic[0]) {
-            magic[1] = get_byte ();
-            imagic1 = 0; /* avoid lint warning */
-        } else {
-            imagic1 = try_byte ();
-            magic[1] = imagic1;
-        }
-    }
+    // uch flags;     /* compression flags */
+    // uch magic[10]; /* magic header */
+    // int imagic0;   /* first magic byte or EOF */
+    // int imagic1;   /* like magic[1], but can represent EOF */
+    // ulg stamp;     /* timestamp */
+    magic_header* h = malloc(sizeof (magic_header));
+    memzero(h, sizeof (magic_header));
+    set_magic_header_type(h);
     method = -1;                 /* unknown yet */
     part_nb++;                   /* number of parts in gzip file */
     header_bytes = 0;
     last_member = 0;
     /* assume multiple members in gzip file except for record oriented I/O */
 
-    if (memcmp(magic, GZIP_MAGIC, 2) == 0
-        || memcmp(magic, OLD_GZIP_MAGIC, 2) == 0) {
+    if (is_gzip_format(h)) {
 
         method = (int)get_byte();
         if (method != DEFLATED) {
-            fprintf(stderr,
-                    "%s: %s: unknown method %d -- not supported\n",
-                    program_name, ifname, method);
-            exit_code = ERROR;
-            return -1;
+            FREE(h);
+            return unknown_decompression_method_error();
         }
+
         work = unzip;
-        flags  = (uch)get_byte();
+        h->flags = (uch) get_byte();
 
-        if ((flags & ENCRYPTED) != 0) {
-            fprintf(stderr,
-                    "%s: %s is encrypted -- not supported\n",
-                    program_name, ifname);
-            exit_code = ERROR;
-            return -1;
+        if (bitmap_contains(h->flags, ENCRYPTED)) {
+            FREE(h);
+            return encrypted_file_error();
         }
-        if ((flags & RESERVED) != 0) {
-            fprintf(stderr,
-                    "%s: %s has flags 0x%x -- not supported\n",
-                    program_name, ifname, flags);
-            exit_code = ERROR;
-            if (force <= 1) return -1;
-        }
-        stamp  = (ulg)get_byte();
-        stamp |= ((ulg)get_byte()) << 8;
-        stamp |= ((ulg)get_byte()) << 16;
-        stamp |= ((ulg)get_byte()) << 24;
-        if (stamp != 0 && !no_time)
-          {
-            if (stamp <= TYPE_MAXIMUM (time_t))
-              {
-                time_stamp.tv_sec = stamp;
-                time_stamp.tv_nsec = 0;
-              }
-            else
-              {
-                WARN ((stderr,
-                       "%s: %s: MTIME %lu out of range for this platform\n",
-                       program_name, ifname, stamp));
-                time_stamp.tv_sec = TYPE_MAXIMUM (time_t);
-                time_stamp.tv_nsec = TIMESPEC_RESOLUTION - 1;
-              }
-          }
 
-        magic[8] = get_byte ();  /* Ignore extra flags.  */
-        magic[9] = get_byte ();  /* Ignore OS type.  */
-
-        if (flags & HEADER_CRC)
-          {
-            magic[2] = DEFLATED;
-            magic[3] = flags;
-            magic[4] = stamp & 0xff;
-            magic[5] = (stamp >> 8) & 0xff;
-            magic[6] = (stamp >> 16) & 0xff;
-            magic[7] = stamp >> 24;
-            updcrc (NULL, 0);
-            updcrc (magic, 10);
-          }
-
-        if ((flags & EXTRA_FIELD) != 0) {
-            uch lenbuf[2];
-            unsigned int len = lenbuf[0] = get_byte ();
-            len |= (lenbuf[1] = get_byte ()) << 8;
-            if (verbose) {
-                fprintf(stderr,"%s: %s: extra field of %u bytes ignored\n",
-                        program_name, ifname, len);
+        if (bitmap_contains(h->flags, RESERVED)) {
+            int no_continue = reserved_flags_used_error(h->flags);
+            if(no_continue != 0){
+              FREE(h);
+              return no_continue;
             }
-            if (flags & HEADER_CRC)
-              updcrc (lenbuf, 2);
-            discard_input_bytes (len, flags);
+        }
+
+        ulg read_time_stamp = read_time_stamp_from_file();
+        set_gzip_time_stamp(read_time_stamp, &time_stamp);
+
+        set_magic_header_data(h, read_time_stamp);
+
+        if (bitmap_contains(h->flags, EXTRA_FIELD)) {
+            discard_extra_header_fields(h->flags);
         }
 
         /* Get original file name if it was truncated */
-        if ((flags & ORIG_NAME) != 0) {
+        if (bitmap_contains(h->flags, ORIG_NAME)) {
             if (no_name || (to_stdout && !list) || part_nb > 1) {
                 /* Discard the old name */
-                discard_input_bytes (-1, flags);
+                discard_input_bytes (-1, h->flags);
             } else {
                 /* Copy the base name. Keep a directory prefix intact. */
-                char *p = gzip_base_name (ofname);
-                char *base = p;
-                for (;;) {
-                    *p = (char) get_byte ();
-                    if (*p++ == '\0') break;
-                    if (p >= ofname+sizeof(ofname)) {
-                        gzip_error ("corrupted input -- file name too large");
-                    }
-                }
-                if (flags & HEADER_CRC)
-                  updcrc ((uch *) base, p - base);
-                p = gzip_base_name (base);
-                memmove (base, p, strlen (p) + 1);
+                char *base = gzip_base_name (ofname);
+                char *base_end = str_end(base, watch_file_name_length);
+                if (bitmap_contains(h->flags, HEADER_CRC))
+                  updcrc ((uch *) base, base_end - base);
+                base_end = gzip_base_name (base);
+                memmove (base, base_end, strlen (base_end) + 1);
                 /* If necessary, adapt the name to local OS conventions: */
                 if (!list) {
                    MAKE_LEGAL_NAME(base);
@@ -1635,32 +1747,23 @@ static int get_method(in)
         } /* ORIG_NAME */
 
         /* Discard file comment if any */
-        if ((flags & COMMENT) != 0) {
-            discard_input_bytes (-1, flags);
+        if (bitmap_contains(h->flags, COMMENT)) {
+            discard_input_bytes (-1, h->flags);
         }
 
-        if (flags & HEADER_CRC)
-          {
-            unsigned int crc16 = updcrc (magic, 0) & 0xffff;
-            unsigned int header16 = get_byte ();
-            header16 |= ((unsigned int) get_byte ()) << 8;
-            if (header16 != crc16)
-              {
-                fprintf (stderr,
-                         "%s: %s: header checksum 0x%04x != computed checksum 0x%04x\n",
-                         program_name, ifname, header16, crc16);
-                exit_code = ERROR;
-                if (force <= 1)
-                  return -1;
-              }
-          }
+        if (bitmap_contains(h->flags, HEADER_CRC)){
+            int crc_check_res = crc_header_check(h->magic);
+            if(crc_check_res != 0){
+              FREE(h);
+              return crc_check_res;
+            }
+        }
 
         if (part_nb == 1) {
             header_bytes = inptr + 2*4; /* include crc and size */
         }
 
-    } else if (memcmp(magic, PKZIP_MAGIC, 2) == 0 && inptr == 2
-            && memcmp((char*)inbuf, PKZIP_MAGIC, 4) == 0) {
+    } else if (is_pkzip_format(h, inptr, inbuf)) {
         /* To simplify the code, we support a zip file when alone only.
          * We are thus guaranteed that the entire local header fits in inbuf.
          */
@@ -1670,57 +1773,48 @@ static int get_method(in)
         /* check_zipfile may get ofname from the local header */
         last_member = 1;
 
-    } else if (memcmp(magic, PACK_MAGIC, 2) == 0) {
+    } else if (is_pack_format(h)) {
         work = unpack;
         method = PACKED;
 
-    } else if (memcmp(magic, LZW_MAGIC, 2) == 0) {
-        work = unlzw;
-        method = COMPRESSED;
-        last_member = 1;
-
-    } else if (memcmp(magic, LZH_MAGIC, 2) == 0) {
-        work = unlzh;
-        method = LZHED;
-        last_member = 1;
-
-    } else if (force && to_stdout && !list) { /* pass input unchanged */
+    } else if (is_stored_format()) { /* pass input unchanged */
         method = STORED;
         work = copy;
-        if (imagic1 != EOF)
+        if (h->imagic1 != EOF)
             inptr--;
         last_member = 1;
-        if (imagic0 != EOF) {
-            write_buf (STDOUT_FILENO, magic, 1);
+        if (h->imagic0 != EOF) {
+            write_buf (STDOUT_FILENO, h->magic, 1);
             bytes_out++;
         }
     }
     if (method >= 0) return method;
-
     if (part_nb == 1) {
         fprintf (stderr, "\n%s: %s: not in gzip format\n",
                  program_name, ifname);
         exit_code = ERROR;
+        FREE(h);
         return -1;
     } else {
-        if (magic[0] == 0)
+        if (h->magic[0] == 0)
           {
-            int inbyte;
-            for (inbyte = imagic1;  inbyte == 0;  inbyte = try_byte ())
-              continue;
+            int inbyte = ignore_trailing_null_bytes(h->imagic1);
             if (inbyte == EOF)
               {
                 if (verbose)
                   WARN ((stderr, "\n%s: %s: decompression OK, trailing zero bytes ignored\n",
                          program_name, ifname));
+                FREE(h);
                 return -3;
               }
           }
 
         WARN((stderr, "\n%s: %s: decompression OK, trailing garbage ignored\n",
               program_name, ifname));
+        FREE(h);
         return -2;
     }
+    FREE(h);
 }
 
 /* ========================================================================
@@ -1738,8 +1832,7 @@ static void do_list(ifd, method)
         "store",  /* 0 */
         "compr",  /* 1 */
         "pack ",  /* 2 */
-        "lzh  ",  /* 3 */
-        "", "", "", "", /* 4 to 7 reserved */
+        "", "", "", "", "", /* 3 to 7 reserved */
         "defla"}; /* 8 */
     int positive_off_t_width = INT_STRLEN_BOUND (off_t) - 1;
 

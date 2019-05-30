@@ -52,10 +52,9 @@ off_t deflateGZIP(int pack_level)
     strm.zalloc = Z_NULL;
     strm.zfree = Z_NULL;
     strm.opaque = Z_NULL;
-    /* ret = deflateInit(&strm, level); */
     ret = deflateInit2(
-            &strm, 
-            pack_level, 
+            &strm,
+            pack_level,
             Z_DEFLATED,         // set this for deflation to work
             MAX_WBITS + 16,     // max window bits + 16 for gzip encoding
             8,                  // memlevel default
@@ -71,7 +70,11 @@ off_t deflateGZIP(int pack_level)
             (void)deflateEnd(&strm);
             return Z_ERRNO;
         }
-        flush = (strm.avail_in != CHUNK) ? Z_FINISH : Z_NO_FLUSH;
+        if (rsync == true) {
+            flush = (strm.avail_in != CHUNK) ? Z_FINISH : Z_FULL_FLUSH;
+        } else {
+            flush = (strm.avail_in != CHUNK) ? Z_FINISH : Z_NO_FLUSH;
+        }
         strm.next_in = in;
 
         /* run deflate() on input until output buffer not full, finish
@@ -106,59 +109,59 @@ off_t deflateGZIP(int pack_level)
 int zip(in, out)
     int in, out;            /* input and output file descriptors */
 {
-    uch  flags = 0;         /* general purpose bit flags */
-    ush  attr = 0;          /* ascii/binary flag */
-    ush  deflate_flags = 0; /* pkzip -es, -en or -ex equivalent */
-    ulg  stamp;
+    /* uch  flags = 0;         /1* general purpose bit flags *1/ */
+    /* ush  attr = 0;          /1* ascii/binary flag *1/ */
+    /* ush  deflate_flags = 0; /1* pkzip -es, -en or -ex equivalent *1/ */
+    /* ulg  stamp; */
 
     ifd = in;
     ofd = out;
-    outcnt = 0;
+    /* outcnt = 0; */
 
     /* Write the header to the gzip file. See algorithm.doc for the format */
 
     method = DEFLATED;
-    put_byte(GZIP_MAGIC[0]); /* magic header */
-    put_byte(GZIP_MAGIC[1]);
-    put_byte(DEFLATED);      /* compression method */
+    /* put_byte(GZIP_MAGIC[0]); /1* magic header *1/ */
+    /* put_byte(GZIP_MAGIC[1]); */
+    /* put_byte(DEFLATED);      /1* compression method *1/ */
 
-    if (save_orig_name) {
-        flags |= ORIG_NAME;
-    }
-    put_byte(flags);         /* general flags */
-    if (time_stamp.tv_nsec < 0)
-      stamp = 0;
-    else if (0 < time_stamp.tv_sec && time_stamp.tv_sec <= 0xffffffff)
-      stamp = time_stamp.tv_sec;
-    else
-      {
-        /* It's intended that timestamp 0 generates this warning,
-           since gzip format reserves 0 for something else.  */
-        warning ("file timestamp out of range for gzip format");
-        stamp = 0;
-      }
-    put_long (stamp);
+    /* if (save_orig_name) { */
+    /*     flags |= ORIG_NAME; */
+    /* } */
+    /* put_byte(flags);         /1* general flags *1/ */
+    /* if (time_stamp.tv_nsec < 0) */
+    /*   stamp = 0; */
+    /* else if (0 < time_stamp.tv_sec && time_stamp.tv_sec <= 0xffffffff) */
+    /*   stamp = time_stamp.tv_sec; */
+    /* else */
+    /*   { */
+    /*     /1* It's intended that timestamp 0 generates this warning, */
+    /*        since gzip format reserves 0 for something else.  *1/ */
+    /*     warning ("file timestamp out of range for gzip format"); */
+    /*     stamp = 0; */
+    /*   } */
+    /* put_long (stamp); */
 
-    /* Write deflated file to zip file */
-    updcrc (NULL, 0);
+    /* /1* Write deflated file to zip file *1/ */
+    /* updcrc (NULL, 0); */
 
-    bi_init(out);
-    ct_init(&attr, &method);
-    if (level == 1)
-      deflate_flags |= FAST;
-    else if (level == 9)
-      deflate_flags |= SLOW;
+    /* bi_init(out); */
+    /* ct_init(&attr, &method); */
+    /* if (level == 1) */
+    /*   deflate_flags |= FAST; */
+    /* else if (level == 9) */
+    /*   deflate_flags |= SLOW; */
 
-    put_byte((uch)deflate_flags); /* extra flags */
-    put_byte(OS_CODE);            /* OS identifier */
+    /* put_byte((uch)deflate_flags); /1* extra flags *1/ */
+    /* put_byte(OS_CODE);            /1* OS identifier *1/ */
 
-    if (save_orig_name) {
-        char *p = gzip_base_name (ifname); /* Don't save the directory part. */
-        do {
-            put_byte (*p);
-        } while (*p++);
-    }
-    header_bytes = (off_t)outcnt;
+    /* if (save_orig_name) { */
+    /*     char *p = gzip_base_name (ifname); /1* Don't save the directory part. *1/ */
+    /*     do { */
+    /*         put_byte (*p); */
+    /*     } while (*p++); */
+    /* } */
+    /* header_bytes = (off_t)outcnt; */
 
 #ifdef IBM_Z_DFLTCC
     dfltcc_deflate (level);
@@ -170,18 +173,18 @@ int zip(in, out)
   /* Check input size
    * (but not on MSDOS -- diet in TSR mode reports an incorrect file size)
    */
-    if (ifile_size != -1L && bytes_in != ifile_size) {
-        fprintf(stderr, "%s: %s: file size changed while zipping\n",
-                program_name, ifname);
-    }
+    /* if (ifile_size != -1L && bytes_in != ifile_size) { */
+    /*     fprintf(stderr, "%s: %s: file size changed while zipping\n", */
+    /*             program_name, ifname); */
+    /* } */
 #endif
 
     /* Write the crc and uncompressed size */
-    put_long (getcrc ());
-    put_long((ulg)bytes_in);
-    header_bytes += 2*4;
+    /* put_long (getcrc ()); */
+    /* put_long((ulg)bytes_in); */
+    /* header_bytes += 2*4; */
 
-    flush_outbuf();
+    /* flush_outbuf(); */
     return OK;
 }
 
@@ -209,4 +212,3 @@ int file_read(buf, size)
     bytes_in += (off_t)len;
     return (int)len;
 }
-

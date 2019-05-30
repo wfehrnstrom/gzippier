@@ -19,7 +19,9 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 # 02111-1307, USA.
 AC_PREREQ([2.63])
-AC_INIT([gzip],[m4_esyscmd(build-aux/git-version-gen .tarball-version)],[bug-gzip@gnu.org])
+AC_INIT([gzip],
+        m4_esyscmd([build-aux/git-version-gen .tarball-version]),
+        [bug-gzip@gnu.org])
 
 AC_CONFIG_SRCDIR([src/gzip.c])
 AC_CONFIG_AUX_DIR([build-aux])

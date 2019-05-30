@@ -79,7 +79,6 @@
 
 #include "tailor.h"
 #include "gzip.h"
-#include "lzw.h" /* just for consistency checking */
 #include "verify.h"
 
 /* ===========================================================================
@@ -796,10 +795,10 @@ static off_t deflate_fast()
 /*             }*/
 /*             if (flush) FLUSH_BLOCK(0), block_start = strstart;*/
 /*         } else if (match_available) {*/
-/*             /* If there was no match at the previous position, output a*/
-/*              * single literal. If there was a match but the current match*/
-/*              * is longer, truncate the previous match to a single literal.*/
-/*              */*/
+//             /* If there was no match at the previous position, output a
+//              * single literal. If there was a match but the current match
+//              * is longer, truncate the previous match to a single literal.
+//              */
 /*             Tracevv((stderr,"%c",window[strstart-1]));*/
 /*             flush = ct_tally (0, window[strstart-1]);*/
 /*             if (rsync && strstart > rsync_chunk_end) {*/
@@ -811,9 +810,9 @@ static off_t deflate_fast()
 /*             strstart++;*/
 /*             lookahead--;*/
 /*         } else {*/
-/*             /* There is no previous match to compare with, wait for*/
-/*              * the next step to decide.*/
-/*              */*/
+//             /* There is no previous match to compare with, wait for
+//              * the next step to decide.
+//              */
 /*             if (rsync && strstart > rsync_chunk_end) {*/
 /*                 /* Reset huffman tree */*/
 /*                 rsync_chunk_end = 0xFFFFFFFFUL;*/
@@ -828,11 +827,11 @@ static off_t deflate_fast()
 /*         }*/
 /*         Assert (strstart <= bytes_in && lookahead <= bytes_in, "a bit too far");*/
 
-/*         /* Make sure that we always have enough lookahead, except*/
-/*          * at the end of the input file. We need MAX_MATCH bytes*/
-/*          * for the next match, plus MIN_MATCH bytes to insert the*/
-/*          * string following the next match.*/
-/*          */*/
+//         /* Make sure that we always have enough lookahead, except
+//          * at the end of the input file. We need MAX_MATCH bytes
+//          * for the next match, plus MIN_MATCH bytes to insert the
+//          * string following the next match.
+//          */
 /*         while (lookahead < MIN_LOOKAHEAD && !eofile) fill_window();*/
 /*     }*/
 /*     if (match_available) ct_tally (0, window[strstart-1]);*/

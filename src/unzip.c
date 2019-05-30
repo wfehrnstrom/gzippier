@@ -46,14 +46,14 @@
 #define  EXTFLG 8               /*  bit for extended local header */
 #define LOCHOW 8                /* offset of compression method */
 /* #define LOCTIM 10               UNUSED file mod time (for decryption) */
-#define LOCCRC 14               /* offset of crc */
-#define LOCSIZ 18               /* offset of compressed size */
-#define LOCLEN 22               /* offset of uncompressed length */
+// #define LOCCRC 14               /* offset of crc */
+// #define LOCSIZ 18               /* offset of compressed size */
+// #define LOCLEN 22               /* offset of uncompressed length */
 #define LOCFIL 26               /* offset of file name field length */
 #define LOCEXT 28               /* offset of extra field length */
 #define LOCHDR 30               /* size of local header, including sig */
-#define EXTHDR 16               /* size of extended local header, inc sig */
-#define RAND_HEAD_LEN  12       /* length of encryption random header */
+// #define EXTHDR 16               /* size of extended local header, inc sig */
+// #define RAND_HEAD_LEN  12       /* length of encryption random header */
 
 
 /* Globals */
@@ -109,7 +109,7 @@ int check_zipfile(in)
 
 /* Inflate using zlib
  */
-int inflateGZIP(void) 
+int inflateGZIP(void)
 {
     int ret;
     unsigned have;
@@ -125,7 +125,6 @@ int inflateGZIP(void)
     strm.opaque = Z_NULL;
     strm.avail_in = 0;
     strm.next_in = Z_NULL;
-    /* ret = inflateInit(&strm); */
     ret = inflateInit2(&strm, MAX_WBITS + 16);
     if (ret != Z_OK)
         return ret;
@@ -137,8 +136,9 @@ int inflateGZIP(void)
             (void)inflateEnd(&strm);
             return Z_ERRNO;
         }
-        if (strm.avail_in == 0)
+        if (strm.avail_in == 0) {
             break;
+        }
         strm.next_in = in;
 
         /* run inflate() on input until output buffer not full */
@@ -146,28 +146,38 @@ int inflateGZIP(void)
             strm.avail_out = CHUNK;
             strm.next_out = out;
             ret = inflate(&strm, Z_NO_FLUSH);
+            /* We need this line for a nasty side effect:
+             * inptr must be set to the end of the input buffer for
+             * input_eof to recognize that
+             * we've processed all of the gzipped input.
+             * TODO: remove this side effect dependent code by removing
+             * branching on inptr.
+             */
+            inptr = strm.total_in;
             assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
             switch (ret) {
-            case Z_NEED_DICT:
-                ret = Z_DATA_ERROR;     /* and fall through */
-            case Z_DATA_ERROR:
-            case Z_MEM_ERROR:
-                (void)inflateEnd(&strm);
-                return ret;
+              case Z_NEED_DICT:
+                  ret = Z_DATA_ERROR;     /* and fall through */
+                  FALLTHROUGH;
+              case Z_DATA_ERROR:
+              case Z_MEM_ERROR:
+                  (void)inflateEnd(&strm);
+                  return ret;
             }
             have = CHUNK - strm.avail_out;
-            if (write(dest, out, have) != have || errno != 0) {
+            int bytes_written = write(dest, out, have);
+            if (bytes_written != have || errno != 0) {
                 (void)inflateEnd(&strm);
                 return Z_ERRNO;
             }
         } while (strm.avail_out == 0);
-
         /* done when inflate() says it's done */
     } while (ret != Z_STREAM_END);
 
     /* clean up and return */
     (void)inflateEnd(&strm);
-    return ret == Z_STREAM_END ? Z_OK : Z_DATA_ERROR;
+    int result = ret == Z_STREAM_END ? Z_OK : Z_DATA_ERROR;
+    return result;
 }
 
 /* ===========================================================================
@@ -180,21 +190,8 @@ int inflateGZIP(void)
 int unzip(in, out)
     int in, out;   /* input and output file descriptors */
 {
-    ulg orig_crc = 0;       /* original crc */
-    ulg orig_len = 0;       /* original uncompressed length */
-    int n;
-    uch buf[EXTHDR];        /* extended local header */
-    int err = OK;
-
     ifd = in;
     ofd = out;
-
-    updcrc(NULL, 0);           /* initialize crc */
-
-    if (pkzip && !ext_header) {  /* crc and length at the end otherwise */
-        orig_crc = LG(inbuf + LOCCRC);
-        orig_len = LG(inbuf + LOCLEN);
-    }
 
     /* Decompress */
     if (method == DEFLATED)  {
@@ -210,79 +207,9 @@ int unzip(in, out)
         } else if (res != 0) {
             gzip_error ("invalid compressed data--format violated");
         }
-
-    } else if (pkzip && method == STORED) {
-
-        register ulg n = LG(inbuf + LOCLEN);
-
-        if (n != LG(inbuf + LOCSIZ) - (decrypt ? RAND_HEAD_LEN : 0)) {
-
-            fprintf(stderr, "len %lu, siz %lu\n", n, LG(inbuf + LOCSIZ));
-            gzip_error ("invalid compressed data--length mismatch");
-        }
-        while (n--) {
-            uch c = (uch)get_byte();
-            put_ubyte(c);
-        }
-        flush_window();
     } else {
         gzip_error ("internal error, invalid method");
     }
 
-    /* Get the crc and original length */
-    if (!pkzip) {
-        /* crc32  (see algorithm.doc)
-         * uncompressed input size modulo 2^32
-         */
-        for (n = 0; n < 8; n++) {
-            buf[n] = (uch)get_byte(); /* may cause an error if EOF */
-        }
-        orig_crc = LG(buf);
-        orig_len = LG(buf+4);
-
-    } else if (ext_header) {  /* If extended header, check it */
-        /* signature - 4bytes: 0x50 0x4b 0x07 0x08
-         * CRC-32 value
-         * compressed size 4-bytes
-         * uncompressed size 4-bytes
-         */
-        for (n = 0; n < EXTHDR; n++) {
-            buf[n] = (uch)get_byte(); /* may cause an error if EOF */
-        }
-        orig_crc = LG(buf+4);
-        orig_len = LG(buf+12);
-    }
-
-    /* Validate decompression */
-    if (orig_crc != updcrc(outbuf, 0)) {
-        fprintf(stderr, "\n%s: %s: invalid compressed data--crc error\n",
-                program_name, ifname);
-        err = ERROR;
-    }
-    if (orig_len != (ulg)(bytes_out & 0xffffffff)) {
-        fprintf(stderr, "\n%s: %s: invalid compressed data--length error\n",
-                program_name, ifname);
-        err = ERROR;
-    }
-
-    /* Check if there are more entries in a pkzip file */
-    if (pkzip && inptr + 4 < insize && LG(inbuf+inptr) == LOCSIG) {
-        if (to_stdout) {
-            WARN((stderr,
-                  "%s: %s has more than one entry--rest ignored\n",
-                  program_name, ifname));
-        } else {
-            /* Don't destroy the input zip file */
-            fprintf(stderr,
-                    "%s: %s has more than one entry -- unchanged\n",
-                    program_name, ifname);
-            err = ERROR;
-        }
-    }
-    ext_header = pkzip = 0; /* for next file */
-    if (err == OK) return OK;
-    exit_code = ERROR;
-    if (!test) abort_gzip();
-    return err;
+    return OK;
 }
-

@@ -293,8 +293,11 @@ static int *file_method;      /* pointer to DEFLATE or STORE */
 extern off_t bits_sent;  /* bit length of the compressed data */
 #endif
 
-extern long block_start;  /* window offset of current block */
-extern unsigned strstart; /* window offset of current string */
+/* Previously defined in deflate.c, but since we are no longer linking that in,
+ * I define that here
+ */
+long block_start = 0L;  /* window offset of current block */
+unsigned strstart = 0; /* window offset of current string */
 
 /* ===========================================================================
  * Local (static) routines in this file.

@@ -1,7 +1,7 @@
 [submodule "gnulib"]
         path = gnulib
         url = git://git.sv.gnu.org/gnulib.git
-[submodule "zlib"]
+[submodule "lib/zlib"]
         path = lib/zlib
-        url = https://github.com/madler/zlib
+        url = https://github.com/madler/zlib.git
         ignore = dirty

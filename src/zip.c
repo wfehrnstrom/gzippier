@@ -73,22 +73,25 @@ deflateGZIP (int pack_level)
           (void)deflateEnd (&strm);
           return Z_ERRNO;
         }
-      flush = (strm.avail_in != CHUNK) ? Z_FINISH : Z_NO_FLUSH;
-      strm.next_in = in;
 
-      /* run deflate() on input until output buffer not full, finish
-         compression if all of source has been read in */
-      do
-        {
-          strm.avail_out = CHUNK;
-          strm.next_out = out;
-          ret = deflate (&strm, flush);    /* no bad return value */
-          assert (ret != Z_STREAM_ERROR);  /* state not clobbered */
-          have = CHUNK - strm.avail_out;
-          if (write (dest, out, have) != have || errno != 0)
-            {
-              (void)deflateEnd (&strm);
-              return Z_ERRNO;
+        if (rsync == true) {
+            flush = (strm.avail_in != CHUNK) ? Z_FINISH : Z_FULL_FLUSH;
+        } else {
+            flush = (strm.avail_in != CHUNK) ? Z_FINISH : Z_NO_FLUSH;
+        }
+        strm.next_in = in;
+
+        /* run deflate() on input until output buffer not full, finish
+           compression if all of source has been read in */
+        do {
+            strm.avail_out = CHUNK;
+            strm.next_out = out;
+            ret = deflate(&strm, flush);    /* no bad return value */
+            assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
+            have = CHUNK - strm.avail_out;
+            if (write(dest, out, have) != have || errno != 0) {
+                (void)deflateEnd(&strm);
+                return Z_ERRNO;
             }
         }
       while (strm.avail_out == 0);

@@ -643,7 +643,7 @@ git_modules_config () {
 # Get zlib files. If $use_git is false, then do nothing.
 
 if $use_git; then
-    zlib_path=$(git_modules_config submodule.zlib.path)
+    zlib_path=$(git_modules_config submodule.lib/zlib.path)
     test -z "$zlib_path" && zlib_path=lib/zlib
     echo "$0: getting zlib files..."
     git submodule init -- "$zlib_path" || exit $?

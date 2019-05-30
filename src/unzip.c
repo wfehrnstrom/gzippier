@@ -56,7 +56,6 @@
                                    inc sig */
 /* #define RAND_HEAD_LEN  12       UNUSED length of encryption random header */
 
-
 /* Globals */
 
 static int decrypt;        /* flag to turn on decryption */
@@ -116,59 +115,58 @@ check_zipfile (int in)
 int
 inflateGZIP (void)
 {
-  int ret;
-  unsigned have;
-  z_stream strm;
-  unsigned char in[CHUNK];
-  unsigned char out[CHUNK];
-  int source = ifd; // set to global input fd
-  int dest = ofd; // set to global output fd
+    int ret;
+    unsigned have;
+    z_stream strm;
+    unsigned char in[CHUNK];
+    unsigned char out[CHUNK];
+    int source = ifd; // set to global input fd
+    int dest = ofd; // set to global output fd
 
-  /* allocate inflate state */
-  strm.zalloc = Z_NULL;
-  strm.zfree = Z_NULL;
-  strm.opaque = Z_NULL;
-  strm.avail_in = 0;
-  strm.next_in = Z_NULL;
-  /* ret = inflateInit(&strm); */
-  /* printf("MAX_WBITS: %d\n", MAX_WBITS); */
-  ret = inflateInit2 (&strm, MAX_WBITS + 16);
-  if (ret != Z_OK)
-    return ret;
+    /* allocate inflate state */
+    strm.zalloc = Z_NULL;
+    strm.zfree = Z_NULL;
+    strm.opaque = Z_NULL;
+    strm.avail_in = 0;
+    strm.next_in = Z_NULL;
+    ret = inflateInit2(&strm, MAX_WBITS + 16);
+    if (ret != Z_OK)
+        return ret;
 
-  errno = 0;
-
-  /* decompress until deflate stream ends or end of file */
-  do
-    {
-      strm.avail_in = read (source, in, CHUNK);
-      if (errno != 0)
-        {
-          (void) inflateEnd (&strm);
-          return Z_ERRNO;
+    /* decompress until deflate stream ends or end of file */
+    do {
+        strm.avail_in = read(source, in, CHUNK);
+        if (errno != 0) {
+            (void)inflateEnd(&strm);
+            return Z_ERRNO;
         }
-      if (strm.avail_in == 0)
-        {
+        if (strm.avail_in == 0) {
           break;
         }
-      strm.next_in = in;
+        strm.next_in = in;
 
-      /* run inflate() on input until output buffer not full */
-      do
-        {
-          strm.avail_out = CHUNK;
-          strm.next_out = out;
-          ret = inflate (&strm, Z_NO_FLUSH);
-          assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
-          switch (ret)
-            {
-            case Z_NEED_DICT:
-              ret = Z_DATA_ERROR;
-              FALLTHROUGH;
-            case Z_DATA_ERROR:
-            case Z_MEM_ERROR:
-              (void) inflateEnd (&strm);
-              return ret;
+        /* run inflate() on input until output buffer not full */
+        do {
+            strm.avail_out = CHUNK;
+            strm.next_out = out;
+            ret = inflate(&strm, Z_NO_FLUSH);
+            /* We need this line for a nasty side effect:
+             * inptr must be set to the end of the input buffer for
+             * input_eof to recognize that
+             * we've processed all of the gzipped input.
+             * TODO: remove this side effect dependent code by removing
+             * branching on inptr.
+             */
+            inptr = strm.total_in;
+            assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
+            switch (ret) {
+              case Z_NEED_DICT:
+                  ret = Z_DATA_ERROR;     /* and fall through */
+                  FALLTHROUGH;
+              case Z_DATA_ERROR:
+              case Z_MEM_ERROR:
+                  (void)inflateEnd(&strm);
+                  return ret;
             }
           have = CHUNK - strm.avail_out;
           int bytes_written = write (dest, out, have);

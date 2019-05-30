@@ -1,9 +1,31 @@
 #!/bin/sh
 
+file_size=10000000 #default size
+
+
+
+
+
+#set -e
+#set -u
+#set -o pipefail
+
+while getopts 's:' OPTION; do
+  case "$OPTION" in
+    s)
+      file_size="$OPTARG"
+      ;;
+    ?)
+      echo "script usage: $(basename $0) [-s number_of_bytes]" >&2
+      exit 1
+      ;;
+  esac
+done
+shift "$(($OPTIND -1))"
+
 
 echo "Generating input file..."
-head -c 10000000 /dev/urandom >input.txt
-
+head -c $file_size /dev/urandom >input.txt
 
 input=$(wc -c input.txt | sed 's/  */ /g' | cut -d " " -f 2)
 

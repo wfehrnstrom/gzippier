@@ -1,9 +1,21 @@
+#DEFINE IN_BUF_SIZE = 131072
+#DEFINE OUT_BUF_SIZE = 64000 //????
 
-#DEFINE 
+static struct buffer_pool in_pool;
+static struct buffer_pool out_pool;
 
 void init_pools() {
   // input pool
+  // in_pool.lock = ;
+  in_pool.head = NULL;
+  in_pool.buffer_size = IN_BUF_SIZE;
+  in_pool.num_buffers = 0;
+  in_pool.max_buffers = threads * 2;
   // output pool
+  out_pool.head = NULL;
+  out_pool.buffer_size = OUT_BUF_SIZE;
+  out_pool.num_buffers = 0;
+  out_pool.max_buffers = -1;
 }
 
 void write_thread(void* nothing) {

@@ -22,20 +22,35 @@ void init_pools() {
   out_pool.max_buffers = -1;
 }
 
+void init_jobs() {
+  // compress jobs
+  // compress_jobs.lock = ;
+  compress_jobs.head = NULL;
+  compress_jobs.tail = NULL;
+
+  // write jobs
+  // write_jobs.lock = ;
+  write_jobs.head = NULL;
+  write_jobs.tail = NULL;
+}
+
 void write_thread(void* nothing) {
   
 }
 
 void compress_thread(void* nothing) {
-
+  
 }
 
 void parallel_zip(int in, int out) {
   init_pools();
-
-  // launch compress threads
+  init_jobs();
 
   // launch write thread
+  pthread_t write_thread;
+  pthread_create(&write_thread, NULL, write_thread, NULL);
+  
+  // launch compress threads
 
   // start reading
 
@@ -44,23 +59,29 @@ void parallel_zip(int in, int out) {
   
 }
 
+struct lock {
+  pthread_mutex_t mutex;
+  pthread_cond_t cond;
+  long value;
+};
+
 struct job_list {
-  // lock
+  struct lock lock;
   struct job *head;
   struct job *tail;
-}
+};
 
 struct job {
   long seq;
   struct buffer *in;
   struct buffer *out;
   unsigned long check;
-  // lock check_done;
+  struct lock check_done;
   struct job *next;
-}
+};
 
 struct buffer_pool {
-  // lock
+  struct lock lock;
   struct buffer *head;
   size_t buffer_size;
   int num_buffers;
@@ -68,7 +89,7 @@ struct buffer_pool {
 };
 
 struct buffer {
-  // lock
+  struct lock lock;
   unsigned char *data;
   size_t size;
   struct buffer_pool *pool;

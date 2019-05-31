@@ -13,15 +13,13 @@ void init_pools() {
   // in_pool.lock = ;
   in_pool.head = NULL;
   in_pool.buffer_size = IN_BUF_SIZE;
-  in_pool.num_buffers = 0;
-  in_pool.max_buffers = threads * 2;
+  in_pool.num_buffers = threads * 2;
 
   // output pool
   // out_pool.lock = ;
   out_pool.head = NULL;
   out_pool.buffer_size = OUT_BUF_SIZE;
-  out_pool.num_buffers = 0;
-  out_pool.max_buffers = -1;
+  out_pool.num_buffers = -1;
 }
 
 void init_jobs() {
@@ -56,6 +54,7 @@ void write_thread(void* nothing) {
     // write data and return out buffer
     writen(ofd, job.out.data, job.out.size);
     // return the buffer
+    return_buffer(&job.out);
     
     // wait for checksum
     wait(&job.check_done);
@@ -140,12 +139,52 @@ struct job {
   struct job *next;
 };
 
+struct buffer *get_buffer(struct buffer_pool *pool) {
+  struct buffer *result;
+  lock(&pool->lock);
+
+  // wait until you can create a new buffer or grab an existing one
+  while (pool->head == NULL && pool->num_buffers != 0) {
+    wait(&pool->lock);
+  }
+  
+  if (pool->head == NULL) {
+    // allocate a new buffer
+    result = malloc(sizeof(struct buffer));
+    //result lock
+    result->data = malloc(pool->buffer_size);
+    result->size = pool->buffer_size;
+    result->pool = pool;
+  } else {
+    result = pool->head;
+    pool->head = pool->head->next;
+  }
+
+  pool->num_buffers--;
+  unlock(&pool->lock);
+  return result;
+}
+
+void return_buffer(struct buffer *buffer) {
+  struct buffer_pool *pool = buffer->pool;
+  lock(&pool->lock);
+
+  buffer->next = pool->head;
+  pool->head = buffer;
+  pool->num_buffers++;
+  
+  unlock(&pool->lock);
+}
+
+void write_buffer(struct buffer *buffer, char const *input, size_t len) {
+  // check if the buffer is big enough
+}
+
 struct buffer_pool {
   struct lock lock;
   struct buffer *head;
   size_t buffer_size;
   int num_buffers;
-  int max_buffers;
 };
 
 struct buffer {

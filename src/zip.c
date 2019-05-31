@@ -66,7 +66,7 @@ off_t deflateGZIP(int pack_level)
     /* compress until end of file */
     do {
         int bytes_in = read(source, in, CHUNK);
-        if(bytes_in == -1)
+        if(bytes_in < 0)
           {
             (void)deflateEnd(&strm);
             return Z_ERRNO;
@@ -75,11 +75,14 @@ off_t deflateGZIP(int pack_level)
           {
             strm.avail_in = bytes_in;
           }
-        if (rsync == true) {
+        if (rsync == true)
+          {
             flush = (strm.avail_in != CHUNK) ? Z_FINISH : Z_FULL_FLUSH;
-        } else {
+          }
+        else
+          {
             flush = (strm.avail_in != CHUNK) ? Z_FINISH : Z_NO_FLUSH;
-        }
+          }
         strm.next_in = in;
 
         /* run deflate() on input until output buffer not full, finish

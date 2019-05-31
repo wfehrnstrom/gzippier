@@ -111,6 +111,8 @@ int zip(in, out)
     ush  deflate_flags = 0; /* pkzip -es, -en or -ex equivalent */
     ulg  stamp;
 
+    fprintf(stderr, "num threads = %d", threads);
+    
     ifd = in;
     ofd = out;
     outcnt = 0;

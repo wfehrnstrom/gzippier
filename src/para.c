@@ -4,7 +4,7 @@
 // TODO: remove lock from buffer struct
 
 #DEFINE IN_BUF_SIZE = 131072
-#DEFINE OUT_BUF_SIZE = 64000 //????
+#DEFINE OUT_BUF_SIZE = 131072 //????
 
 static struct buffer_pool in_pool;
 static struct buffer_pool out_pool;
@@ -62,7 +62,7 @@ void write_thread(void* nothing) {
     unlock(&write_jobs.lock);
     
     // write data and return out buffer
-    writen(ofd, job->out->data, job->out->size);
+    writen(ofd, job->out->data, job->out->len);
     // return the buffer
     return_buffer(job->out);
     
@@ -105,8 +105,13 @@ void compress_thread(void* nothing) {
     job->out = get_pool(&out_pool);
     
     // check if this is the last (empty) block
-    job->more = job->in->size;
     if (job->more) {  
+      // compress
+
+      // PLACEHOLDER COPY
+      memcpy(job->out->data, job->in->data, job->in->len);
+      job->out->len = job->in->len;
+      
       
     }
     
@@ -163,13 +168,9 @@ void parallel_zip(int in, int out) {
     struct job *job = get_job(seq);
 
     // read into it
-    job->in.size = readn(ifd, job->in->data, IN_BUF_SIZE);
-    if (job->in.size == 0) {
-      return_buffer(job->in);
-      return_job(job);
-      break;
-    }
-
+    job->in.len = readn(ifd, job->in->data, IN_BUF_SIZE);
+    job->more = job->in.len;
+    
     // put it on the back of the compress list
     lock(&compress_jobs.lock);
     if (compress_jobs.head == NULL) {
@@ -312,6 +313,7 @@ struct buffer {
   struct lock lock; // probably unnecessary
   unsigned char *data;
   size_t size;
+  size_t len;
   struct buffer_pool *pool;
   struct buffer *next;
 };
@@ -331,6 +333,7 @@ struct buffer *get_buffer(struct buffer_pool *pool) {
     init_lock(&result->lock);
     result->data = malloc(pool->buffer_size);
     result->size = pool->buffer_size;
+    result->len = 0;
     result->pool = pool;
   } else {
     result = pool->head;
@@ -344,6 +347,7 @@ struct buffer *get_buffer(struct buffer_pool *pool) {
 
 void return_buffer(struct buffer *buffer) {
   struct buffer_pool *pool = buffer->pool;
+  buffer->len = 0;
   lock(&pool->lock);
 
   buffer->next = pool->head;

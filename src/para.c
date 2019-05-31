@@ -13,13 +13,13 @@ static int ofd;
 
 void init_pools() {
   // input pool
-  // in_pool.lock = ;
+  lock_init(&in_pool.lock);
   in_pool.head = NULL;
   in_pool.buffer_size = IN_BUF_SIZE;
   in_pool.num_buffers = threads * 2;
 
   // output pool
-  // out_pool.lock = ;
+  lock_init(&out_pool.lock);
   out_pool.head = NULL;
   out_pool.buffer_size = OUT_BUF_SIZE;
   out_pool.num_buffers = -1;
@@ -27,12 +27,12 @@ void init_pools() {
 
 void init_jobs() {
   // compress jobs
-  // compress_jobs.lock = ;
+  lock_init(&compress_jobs.lock);
   compress_jobs.head = NULL;
   compress_jobs.tail = NULL;
 
   // write jobs
-  // write_jobs.lock = ;
+  lock_init(&write_jobs.lock);
   write_jobs.head = NULL;
   write_jobs.tail = NULL;
 }
@@ -112,6 +112,11 @@ struct lock {
   long value;
 };
 
+void init_lock(struct lock *lock) {
+  pthread_mutex_init(&lock->mutex, NULL);
+  pthread_cond_init(&lock->cond, NULL);
+}
+
 int lock(struct lock *lock) {
   return pthread_mutex_lock(&lock->mutex);
 }
@@ -152,6 +157,7 @@ struct job *get_job() {
     unlock(&free_jobs.lock);
     // allocate a new job
     result = malloc(sizeof(struct job));
+    init_lock(&result->check_done);
     result->seq = 0;
     lock(&result->check_done);
     result->next = NULL;
@@ -198,7 +204,7 @@ struct buffer *get_buffer(struct buffer_pool *pool) {
   if (pool->head == NULL) {
     // allocate a new buffer
     result = malloc(sizeof(struct buffer));
-    //result lock
+    init_lock(&result->lock);
     result->data = malloc(pool->buffer_size);
     result->size = pool->buffer_size;
     result->pool = pool;

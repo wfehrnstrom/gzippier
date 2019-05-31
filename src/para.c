@@ -5,6 +5,8 @@ static struct buffer_pool in_pool;
 static struct buffer_pool out_pool;
 static struct job_list compress_jobs;
 static struct job_list write_jobs;
+static int ifd;
+static int ofd;
 
 void init_pools() {
   // input pool
@@ -35,7 +37,36 @@ void init_jobs() {
 }
 
 void write_thread(void* nothing) {
-  
+  // write the header
+
+  long seq = 0;
+  struct job *job;
+  while (/* theres more to do */) {
+    // wait for the next job in sequence
+    struct lock *write_lock = &write_jobs.lock;
+    lock(&write_jobs.lock);
+    while (seq != write_jobs.lock.value) {
+      wait(&write_jobs.lock);
+    }
+    
+    // get job
+    job = write_jobs.head;
+    write_jobs.head = job.next;
+    
+    // write data and return out buffer
+    writen(ofd, job.out.data, job.out.size);
+    // return the buffer
+    
+    // wait for checksum
+    wait(&job.check_done);
+    // assemble the checksum
+    
+    // free the job
+    
+    seq++;
+  }
+
+  // write the trailer
 }
 
 void compress_thread(void* nothing) {
@@ -43,6 +74,8 @@ void compress_thread(void* nothing) {
 }
 
 void parallel_zip(int in, int out) {
+  ifd = in;
+  ofd = out;
   init_pools();
   init_jobs();
 
@@ -59,11 +92,38 @@ void parallel_zip(int in, int out) {
   
 }
 
+size_t writen(int fd, void const *buf, size_t len) {
+  char const *next = buf;
+  size_t const max = SIZE_MAX >> 1;
+    
+  while (len != 0) {
+    ssize_t result = write(fd, next, len > max ? max : len);
+    next += result;
+    len -= result;
+  }
+}
+
 struct lock {
   pthread_mutex_t mutex;
   pthread_cond_t cond;
   long value;
 };
+
+void lock(struct lock *lock) {
+  pthread_mutex_lock(&lock->mutex);
+}
+
+void unlock(struct lock *lock) {
+  pthread_mutex_unlock(&lock->mutex);
+}
+
+void wait(struct lock *lock) {
+  pthread_cond_wait(&lock->cond, &lock->mutex);
+}
+
+void broadcast(struct lock *lock) {
+  pthread_cond_broadcast(&lock->cond)
+}
 
 struct job_list {
   struct lock lock;
@@ -95,8 +155,6 @@ struct buffer {
   struct buffer_pool *pool;
   struct buffer *next;
 };
-
-buffer *
 
 // 2xthreads read buffers, threads write buffers
 

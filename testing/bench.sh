@@ -1,13 +1,13 @@
 #!/bin/sh
 
-file_size=10000000 #default size
-
+nbytes=10000000 #default size
+candidates=(gzip bzip2 lzma ./oldgzip)
 
 
 while getopts 's:' OPTION; do
   case "$OPTION" in
     s)
-      file_size="$OPTARG"
+      nbytes="$OPTARG"
       ;;
     ?)
       echo "script usage: $(basename $0) [-s number_of_bytes]" >&2
@@ -15,7 +15,7 @@ while getopts 's:' OPTION; do
       ;;
   esac
 done
-shift "$(($OPTIND -1))"
+#shift "$(($OPTIND -1))"
 
 wget http://ftp.gnu.org/gnu/gzip/gzip-1.10.tar.xz
 tar xf gzip-1.10.tar.xz 
@@ -27,71 +27,95 @@ cd ..
 
 
 echo "Generating input file..."
-head -c $file_size /dev/urandom >input.txt
+head -c $nbytes /dev/urandom >input
 
-input=$(wc -c input.txt | sed 's/^[ \t]*//g' | cut -d " " -f 1)
-
-printf "Input file size: $input\n"
-
-
-
-gzip_com=()
-gzip_dec=()
-
-old_gzip_com=()
-old_gzip_dec=()
-
-
-
-printf "\nCompressed file size in bytes:\n"
-printf "\tgzip\told_gzip\n"
-rm *.lzma *.gz *bz2 2>/dev/null 
-#cp original.txt input.txt
-for i in `seq 1 9`;
+progs=()
+for prog in "${candidates[@]}"
 do
- 	
-	com_time=$((time gzip -$i input.txt) 2>&1 | sed '2q;d' | cut -f 2)
- 	compressed_size=$(wc -c input.txt.gz | sed 's/^[ \t]*//g' | cut -d " " -f 1)
- 	dec_time=$((time gzip -$i -d input.txt.gz) 2>&1| sed '2q;d' | cut -f 2)
- 	printf "$i\t$compressed_size"
- 	gzip_com+=($com_time)
- 	gzip_dec+=($dec_time)
+    if [[ $(command -v $prog) ]]
+    then
+        progs+=($prog)
+    fi
+done
 
- 	com_time=$((time ./old_gzip -$i input.txt) 2>&1 | sed '2q;d' | cut -f 2)
- 	compressed_size=$(wc -c input.txt.gz | sed 's/^[ \t]*//g' | cut -d " " -f 1)
- 	dec_time=$((time ./old_gzip -$i -d input.txt.gz) 2>&1| sed '2q;d' | cut -f 2)
- 	printf "\t$compressed_size\n"
-	old_gzip_com+=($com_time)
- 	old_gzip_dec+=($dec_time)
+progs+=(./old_gzip)
 
 
+print_header () {
+    for prog in "${progs[@]}"
+    do
+        printf "\t\t$prog"
+    done
+    printf "\n"
+}
 
-done  
 
-printf "\nCompression time:\n"
-printf "\tgzip\t\told_gzip\n"
-for i in `seq 1 9`;
+
+#input=$(wc -c input.txt | sed 's/^[ \t]*//g' | cut -d " " -f 1)
+
+#printf "Input file size: $input\n"
+
+
+
+
+compr_times=()
+decompr_times=()
+
+printf "\nCompressed file sizes:\n"
+print_header
+
+for i in `seq 1 9`
 do
-	j=($i)-1
-	printf "$i\t${gzip_com[$j]}"
-	printf "\t${old_gzip_com[$j]}\n"
+    printf "$i"
+    for prog in "${progs[@]}"
+    do
+        compr_time=$((time $prog -$i input) 2>&1 | sed '2q;d' | cut -f 2)
+        compr_size=$(wc -c input* | sed 's/^[ \t]*//g' | cut -d " " -f 1)
+        printf "\t\t$compr_size"
+        decompr_time=$((time $prog -$i -d input*) 2>&1 | sed '2q;d' | cut -f 2)
+
+        compr_times+=($compr_time)
+        decompr_times+=($decompr_time)
+    done
+    printf "\n"
+done
 
 
-done  
+printf "\nCompression times:\n"
+print_header
 
-printf "\nDecompression time:\n"
-printf "\tgzip\t\told_gzip\n"
-for i in `seq 1 9`;
+n=0
+for i in `seq 1 9`
 do
-	j=($i)-1
-	printf "$i\t${gzip_dec[$j]}"
-	printf "\t${old_gzip_dec[$j]}\n"
+    printf "$i\t"
+    for prog in "${progs[@]}"
+    do
+        printf "\t${compr_times[$n]}"
+        n=$((n+1))
+    done
+    printf "\n"
+done
 
-done  
 
-rm *.gz *bz2 2>/dev/null 
-rm input.txt
-rm -rf gzip-1.10* old_gzip
+printf "\nDecompression times:\n"
+print_header
+
+n=0
+for i in `seq 1 9`
+do
+    printf "$i\t"
+    for prog in "${progs[@]}"
+    do
+        printf "\t${decompr_times[$n]}"
+        n=$((n+1))
+    done
+    printf "\n"
+done
+
+
+rm -rf input* gzip-1.10* old_gzip
+
+#rm -rf gzip-1.10* old_gzip
 
 
  #if we're doing this, then we'll always need a compressed size, dec_size... * 3.  great.

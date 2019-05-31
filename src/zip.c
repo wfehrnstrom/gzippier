@@ -77,6 +77,7 @@ off_t deflateGZIP(int pack_level)
           }
         if (rsync == true)
           {
+            // Very unsure about effectiveness of Z_FULL_FLUSH for rsyncabl
             flush = (strm.avail_in != CHUNK) ? Z_FINISH : Z_FULL_FLUSH;
           }
         else

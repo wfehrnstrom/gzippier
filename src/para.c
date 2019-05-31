@@ -1,3 +1,5 @@
+// TODO: error checking on all mallocs
+
 #DEFINE IN_BUF_SIZE = 131072
 #DEFINE OUT_BUF_SIZE = 64000 //????
 
@@ -5,6 +7,7 @@ static struct buffer_pool in_pool;
 static struct buffer_pool out_pool;
 static struct job_list compress_jobs;
 static struct job_list write_jobs;
+static struct job_list free_jobs;
 static int ifd;
 static int ofd;
 
@@ -61,6 +64,7 @@ void write_thread(void* nothing) {
     // assemble the checksum
     
     // free the job
+    free_job(job);
     
     seq++;
   }
@@ -108,21 +112,22 @@ struct lock {
   long value;
 };
 
-void lock(struct lock *lock) {
-  pthread_mutex_lock(&lock->mutex);
+int lock(struct lock *lock) {
+  return pthread_mutex_lock(&lock->mutex);
 }
 
-void unlock(struct lock *lock) {
-  pthread_mutex_unlock(&lock->mutex);
+int unlock(struct lock *lock) {
+  return pthread_mutex_unlock(&lock->mutex);
 }
 
-void wait(struct lock *lock) {
-  pthread_cond_wait(&lock->cond, &lock->mutex);
+int wait(struct lock *lock) {
+  return pthread_cond_wait(&lock->cond, &lock->mutex);
 }
 
-void broadcast(struct lock *lock) {
-  pthread_cond_broadcast(&lock->cond)
+int broadcast(struct lock *lock) {
+  return pthread_cond_broadcast(&lock->cond)
 }
+
 
 struct job_list {
   struct lock lock;
@@ -137,6 +142,48 @@ struct job {
   unsigned long check;
   struct lock check_done;
   struct job *next;
+};
+
+struct job *get_job() {
+  struct job* result;
+  lock(&free_jobs.lock);
+
+  if (free_jobs.head == NULL) {
+    unlock(&free_jobs.lock);
+    // allocate a new job
+    result = malloc(sizeof(struct job));
+    result->seq = 0;
+    lock(&result->check_done);
+    result->next = NULL;
+  } else {
+    result = free_jobs.head;
+    free_jobs.head = free_jobs.head->next;
+    unlock(&free_jobs.lock);
+  }
+  
+  return result;
+}
+
+void return_job(struct job *job) {
+  lock(&free_jobs.lock);
+  job->next = free_jobs.head;
+  free_jobs.head = job;
+  unlock(&free_jobs.lock);
+}
+
+struct buffer_pool {
+  struct lock lock;
+  struct buffer *head;
+  size_t buffer_size;
+  int num_buffers;
+};
+
+struct buffer {
+  struct lock lock;
+  unsigned char *data;
+  size_t size;
+  struct buffer_pool *pool;
+  struct buffer *next;
 };
 
 struct buffer *get_buffer(struct buffer_pool *pool) {
@@ -179,21 +226,6 @@ void return_buffer(struct buffer *buffer) {
 void write_buffer(struct buffer *buffer, char const *input, size_t len) {
   // check if the buffer is big enough
 }
-
-struct buffer_pool {
-  struct lock lock;
-  struct buffer *head;
-  size_t buffer_size;
-  int num_buffers;
-};
-
-struct buffer {
-  struct lock lock;
-  unsigned char *data;
-  size_t size;
-  struct buffer_pool *pool;
-  struct buffer *next;
-};
 
 // 2xthreads read buffers, threads write buffers
 

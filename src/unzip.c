@@ -131,11 +131,16 @@ int inflateGZIP(void)
 
     /* decompress until deflate stream ends or end of file */
     do {
-        strm.avail_in = read(source, in, CHUNK);
-        if (errno != 0) {
+        int bytes_read = read(source, in, CHUNK);
+        if (bytes_read == -1)
+          {
             (void)inflateEnd(&strm);
             return Z_ERRNO;
-        }
+          }
+        else
+          {
+            strm.avail_in = bytes_read;
+          }
         if (strm.avail_in == 0) {
             break;
         }

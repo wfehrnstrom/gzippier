@@ -41,7 +41,7 @@ off_t deflateGZIP(int pack_level)
 {
     // source is input file descriptor, dest is input file descriptor
     int ret, flush;
-    unsigned have;
+    unsigned writtenOutBytes;
     z_stream strm;
     unsigned char in[CHUNK];
     unsigned char out[CHUNK];
@@ -65,11 +65,16 @@ off_t deflateGZIP(int pack_level)
 
     /* compress until end of file */
     do {
-        strm.avail_in = read(source, in, CHUNK);
-        if (errno != 0) {
+        int bytes_in = read(source, in, CHUNK);
+        if(bytes_in == -1)
+          {
             (void)deflateEnd(&strm);
             return Z_ERRNO;
-        }
+          }
+        else
+          {
+            strm.avail_in = bytes_in;
+          }
         if (rsync == true) {
             flush = (strm.avail_in != CHUNK) ? Z_FINISH : Z_FULL_FLUSH;
         } else {
@@ -84,8 +89,9 @@ off_t deflateGZIP(int pack_level)
             strm.next_out = out;
             ret = deflate(&strm, flush);    /* no bad return value */
             assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
-            have = CHUNK - strm.avail_out;
-            if (write(dest, out, have) != have || errno != 0) {
+            writtenOutBytes = CHUNK - strm.avail_out;
+            if (write(dest, out, writtenOutBytes) != writtenOutBytes) {
+                fprintf(stderr, "%s\n", strerror(errno));
                 (void)deflateEnd(&strm);
                 return Z_ERRNO;
             }

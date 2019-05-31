@@ -22,7 +22,10 @@ SRC = src
 ALL_RECURSIVE_TARGETS = $(SRC)
 BUILT_SOURCES =
 
-SUBDIRS = lib doc $(SRC) . tests
+if ZLIB_MAKEFILE
+  ZLIB_SRC = lib/zlib
+endif
+SUBDIRS = $(ZLIB_SRC) lib doc $(SRC) . tests
 AM_CPPFLAGS = -I$(top_srcdir)/lib
 AM_CFLAGS = $(WARN_CFLAGS) $(WERROR_CFLAGS)
 
@@ -42,7 +45,7 @@ EXTRA_DIST = $(ACINCLUDE_INPUTS) $(man_MANS) \
   $(SRC)/tailor.h \
   zcat.in zcmp.in zdiff.in \
   zegrep.in zfgrep.in zforce.in zgrep.in zless.in zmore.in znew.in
-noinst_HEADERS = $(SRC)/gzip.h $(SRC)/lzw.h
+noinst_HEADERS = $(SRC)/gzip.h
 
 bin_SCRIPTS = gunzip gzexe zcat zcmp zdiff \
   zegrep zfgrep zforce zgrep zless zmore znew

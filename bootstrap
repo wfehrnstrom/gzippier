@@ -640,6 +640,19 @@ git_modules_config () {
   test -f .gitmodules && git config --file .gitmodules "$@"
 }
 
+# Get zlib files. If $use_git is false, then do nothing.
+
+if $use_git; then
+    zlib_path=$(git_modules_config submodule.lib/zlib.path)
+    test -z "$zlib_path" && zlib_path=lib/zlib
+    echo "$0: getting zlib files..."
+    git submodule init -- "$zlib_path" || exit $?
+    git submodule update -- "$zlib_path" || exit $?
+else
+    echo "--no-git is specified, you must manually add zlib.h, zconf.h, and" \
+         "zlib.a to lib/zlib"
+fi
+
 if $use_gnulib; then
   if $use_git; then
     gnulib_path=$(git_modules_config submodule.gnulib.path)

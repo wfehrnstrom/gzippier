@@ -40,45 +40,51 @@ enum { SLOW = 2, FAST = 4 };
 off_t
 deflateGZIP (int pack_level)
 {
-  // source is input file descriptor, dest is input file descriptor
-  int ret, flush;
-  unsigned have;
-  z_stream strm;
-  unsigned char in[CHUNK];
-  unsigned char out[CHUNK];
-  int source = ifd;
-  int dest = ofd;
+    // source is input file descriptor, dest is input file descriptor
+    int ret, flush;
+    unsigned writtenOutBytes;
+    z_stream strm;
+    unsigned char in[CHUNK];
+    unsigned char out[CHUNK];
+    int source = ifd;
+    int dest = ofd;
 
-  /* allocate deflate state */
-  strm.zalloc = Z_NULL;
-  strm.zfree = Z_NULL;
-  strm.opaque = Z_NULL;
-  ret = deflateInit2 (&strm,
-                      pack_level,
-                      Z_DEFLATED,     // set this for deflation to work
-                      MAX_WBITS + 16, // max window bits + 16 for gzip encoding
-                      8,              // memlevel default
-                      Z_DEFAULT_STRATEGY);
-  if (ret != Z_OK)
-    return ret;
+    /* allocate deflate state */
+    strm.zalloc = Z_NULL;
+    strm.zfree = Z_NULL;
+    strm.opaque = Z_NULL;
+    ret = deflateInit2(
+            &strm,
+            pack_level,
+            Z_DEFLATED,         // set this for deflation to work
+            MAX_WBITS + 16,     // max window bits + 16 for gzip encoding
+            8,                  // memlevel default
+            Z_DEFAULT_STRATEGY  // strategy
+    );
+    if (ret != Z_OK)
+        return ret;
 
-  errno = 0;
-
-  /* compress until end of file */
-  do
-    {
-      strm.avail_in = read (source, in, CHUNK);
-      if (errno != 0)
-        {
-          (void)deflateEnd (&strm);
-          return Z_ERRNO;
-        }
-
-        if (rsync == true) {
+    /* compress until end of file */
+    do {
+        int bytes_in = read(source, in, CHUNK);
+        if(bytes_in < 0)
+          {
+            (void)deflateEnd(&strm);
+            return Z_ERRNO;
+          }
+        else
+          {
+            strm.avail_in = bytes_in;
+          }
+        if (rsync == true)
+          {
+            // Very unsure about effectiveness of Z_FULL_FLUSH for rsyncabl
             flush = (strm.avail_in != CHUNK) ? Z_FINISH : Z_FULL_FLUSH;
-        } else {
+          }
+        else
+          {
             flush = (strm.avail_in != CHUNK) ? Z_FINISH : Z_NO_FLUSH;
-        }
+          }
         strm.next_in = in;
 
         /* run deflate() on input until output buffer not full, finish
@@ -88,8 +94,9 @@ deflateGZIP (int pack_level)
             strm.next_out = out;
             ret = deflate(&strm, flush);    /* no bad return value */
             assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
-            have = CHUNK - strm.avail_out;
-            if (write(dest, out, have) != have || errno != 0) {
+            writtenOutBytes = CHUNK - strm.avail_out;
+            if (write(dest, out, writtenOutBytes) != writtenOutBytes) {
+                fprintf(stderr, "%s\n", strerror(errno));
                 (void)deflateEnd(&strm);
                 return Z_ERRNO;
             }

@@ -756,8 +756,8 @@ static void treat_stdin (void)
       }
 
     get_input_size_and_time ();
+    clear_bufs(); /* clear input and output buffers */
 
-    clear_bufs (); /* clear input and output buffers */
     to_stdout = 1;
     part_nb = 0;
     ifd = STDIN_FILENO;
@@ -1138,7 +1138,6 @@ create_outfile (void)
       WARN ((stderr, "%s: %s: warning, name truncated\n",
              program_name, ofname));
     }
-
   return OK;
 }
 

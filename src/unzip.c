@@ -116,7 +116,7 @@ int
 inflateGZIP (void)
 {
     int ret;
-    unsigned have;
+    unsigned writtenOutBytes;
     z_stream strm;
     unsigned char in[CHUNK];
     unsigned char out[CHUNK];
@@ -135,11 +135,16 @@ inflateGZIP (void)
 
     /* decompress until deflate stream ends or end of file */
     do {
-        strm.avail_in = read(source, in, CHUNK);
-        if (errno != 0) {
+        int bytes_read = read(source, in, CHUNK);
+        if (bytes_read < 0)
+          {
             (void)inflateEnd(&strm);
             return Z_ERRNO;
-        }
+          }
+        else
+          {
+            strm.avail_in = bytes_read;
+          }
         if (strm.avail_in == 0) {
           break;
         }
@@ -168,12 +173,11 @@ inflateGZIP (void)
                   (void)inflateEnd(&strm);
                   return ret;
             }
-          have = CHUNK - strm.avail_out;
-          int bytes_written = write (dest, out, have);
-          if (bytes_written != have || errno != 0)
-            {
-              (void)inflateEnd(&strm);
-              return Z_ERRNO;
+            writtenOutBytes = CHUNK - strm.avail_out;
+            int bytes_written = write(dest, out, writtenOutBytes);
+            if (bytes_written != writtenOutBytes) {
+                (void)inflateEnd(&strm);
+                return Z_ERRNO;
             }
         }
       while (strm.avail_out == 0);

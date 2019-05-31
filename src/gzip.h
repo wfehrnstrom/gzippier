@@ -20,9 +20,9 @@
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.  */
 
 #ifdef __STDC__
-   typedef void *voidp;
+  typedef void *voidp;
 #else
-   typedef char *voidp;
+  typedef char *voidp;
 #endif
 
 #ifndef __attribute__

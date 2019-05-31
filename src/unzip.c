@@ -46,15 +46,15 @@
 #define  EXTFLG 8               /*  bit for extended local header */
 #define LOCHOW 8                /* offset of compression method */
 /* #define LOCTIM 10               UNUSED file mod time (for decryption) */
-// #define LOCCRC 14               /* offset of crc */
-// #define LOCSIZ 18               /* offset of compressed size */
-// #define LOCLEN 22               /* offset of uncompressed length */
+/* #define LOCCRC 14               UNUSED offset of crc */
+/* #define LOCSIZ 18               UNUSED offset of compressed size */
+/* #define LOCLEN 22               UNUSED offset of uncompressed length */
 #define LOCFIL 26               /* offset of file name field length */
 #define LOCEXT 28               /* offset of extra field length */
 #define LOCHDR 30               /* size of local header, including sig */
-// #define EXTHDR 16               /* size of extended local header, inc sig */
-// #define RAND_HEAD_LEN  12       /* length of encryption random header */
-
+/* #define EXTHDR 16               UNUSED size of extended local header,
+                                   inc sig */
+/* #define RAND_HEAD_LEN  12       UNUSED length of encryption random header */
 
 /* Globals */
 
@@ -66,50 +66,54 @@ static int ext_header = 0; /* set if extended local header */
  * Check zip file and advance inptr to the start of the compressed data.
  * Get ofname from the local header if necessary.
  */
-int check_zipfile(in)
-    int in;   /* input file descriptors */
+int
+check_zipfile (int in)
 {
-    uch *h = inbuf + inptr; /* first local header */
+  uch *h = inbuf + inptr; /* first local header */
 
-    ifd = in;
+  ifd = in;
 
-    /* Check validity of local header, and skip name and extra fields */
-    inptr += LOCHDR + SH(h + LOCFIL) + SH(h + LOCEXT);
+  /* Check validity of local header, and skip name and extra fields */
+  inptr += LOCHDR + SH(h + LOCFIL) + SH(h + LOCEXT);
 
-    if (inptr > insize || LG(h) != LOCSIG) {
-        fprintf(stderr, "\n%s: %s: not a valid zip file\n",
-                program_name, ifname);
-        exit_code = ERROR;
-        return ERROR;
+  if (inptr > insize || LG(h) != LOCSIG)
+    {
+      fprintf (stderr, "\n%s: %s: not a valid zip file\n",
+               program_name, ifname);
+      exit_code = ERROR;
+      return ERROR;
     }
-    method = h[LOCHOW];
-    if (method != STORED && method != DEFLATED) {
-        fprintf(stderr,
-                "\n%s: %s: first entry not deflated or stored -- use unzip\n",
-                program_name, ifname);
-        exit_code = ERROR;
-        return ERROR;
-    }
-
-    /* If entry encrypted, decrypt and validate encryption header */
-    if ((decrypt = h[LOCFLG] & CRPFLG) != 0) {
-        fprintf(stderr, "\n%s: %s: encrypted file -- use unzip\n",
-                program_name, ifname);
-        exit_code = ERROR;
-        return ERROR;
+  method = h[LOCHOW];
+  if (method != STORED && method != DEFLATED)
+    {
+      fprintf (stderr,
+               "\n%s: %s: first entry not deflated or stored -- use unzip\n",
+               program_name, ifname);
+      exit_code = ERROR;
+      return ERROR;
     }
 
-    /* Save flags for unzip() */
-    ext_header = (h[LOCFLG] & EXTFLG) != 0;
-    pkzip = 1;
+  /* If entry encrypted, decrypt and validate encryption header */
+  if ((decrypt = h[LOCFLG] & CRPFLG) != 0)
+    {
+      fprintf (stderr, "\n%s: %s: encrypted file -- use unzip\n",
+               program_name, ifname);
+      exit_code = ERROR;
+      return ERROR;
+    }
 
-    /* Get ofname and timestamp from local header (to be done) */
-    return OK;
+  /* Save flags for unzip() */
+  ext_header = (h[LOCFLG] & EXTFLG) != 0;
+  pkzip = 1;
+
+  /* Get ofname and timestamp from local header (to be done) */
+  return OK;
 }
 
 /* Inflate using zlib
  */
-int inflateGZIP(void)
+int
+inflateGZIP (void)
 {
     int ret;
     unsigned writtenOutBytes;
@@ -142,7 +146,7 @@ int inflateGZIP(void)
             strm.avail_in = bytes_read;
           }
         if (strm.avail_in == 0) {
-            break;
+          break;
         }
         strm.next_in = in;
 
@@ -175,14 +179,16 @@ int inflateGZIP(void)
                 (void)inflateEnd(&strm);
                 return Z_ERRNO;
             }
-        } while (strm.avail_out == 0);
-        /* done when inflate() says it's done */
-    } while (ret != Z_STREAM_END);
+        }
+      while (strm.avail_out == 0);
+      /* done when inflate() says it's done */
+    }
+  while (ret != Z_STREAM_END);
 
-    /* clean up and return */
-    (void)inflateEnd(&strm);
-    int result = ret == Z_STREAM_END ? Z_OK : Z_DATA_ERROR;
-    return result;
+  /* clean up and return */
+  (void) inflateEnd (&strm);
+  int result = ret == Z_STREAM_END ? Z_OK : Z_DATA_ERROR;
+  return result;
 }
 
 /* ===========================================================================
@@ -192,29 +198,33 @@ int inflateGZIP(void)
  *   the compressed data, from offsets inptr to insize-1 included.
  *   The magic header has already been checked. The output buffer is cleared.
  */
-int unzip(in, out)
-    int in, out;   /* input and output file descriptors */
+int
+unzip (int in, int out)
 {
-    ifd = in;
-    ofd = out;
+  ifd = in;
+  ofd = out;
 
-    /* Decompress */
-    if (method == DEFLATED)  {
-
+  /* Decompress */
+  if (method == DEFLATED)
+    {
 #ifdef IBM_Z_DFLTCC
-        int res = dfltcc_inflate ();
+      int res = dfltcc_inflate ();
 #else
-        int res = inflateGZIP();
+      int res = inflateGZIP ();
 #endif
-
-        if (res == 3) {
-            xalloc_die ();
-        } else if (res != 0) {
-            gzip_error ("invalid compressed data--format violated");
+      if (res == 3)
+        {
+          xalloc_die ();
         }
-    } else {
-        gzip_error ("internal error, invalid method");
+      else if (res != 0)
+        {
+          gzip_error ("invalid compressed data--format violated");
+        }
+    }
+  else
+    {
+      gzip_error ("internal error, invalid method");
     }
 
-    return OK;
+  return OK;
 }

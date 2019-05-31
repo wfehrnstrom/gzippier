@@ -37,7 +37,8 @@ enum { SLOW = 2, FAST = 4 };
 
 /* Deflate using zlib
  */
-off_t deflateGZIP(int pack_level)
+off_t
+deflateGZIP (int pack_level)
 {
     // source is input file descriptor, dest is input file descriptor
     int ret, flush;
@@ -99,16 +100,18 @@ off_t deflateGZIP(int pack_level)
                 (void)deflateEnd(&strm);
                 return Z_ERRNO;
             }
-        } while (strm.avail_out == 0);
-        assert(strm.avail_in == 0);     /* all input will be used */
+        }
+      while (strm.avail_out == 0);
+      assert (strm.avail_in == 0);     /* all input will be used */
 
-        /* done when last data in file processed */
-    } while (flush != Z_FINISH);
-    assert(ret == Z_STREAM_END);        /* stream will be complete */
+      /* done when last data in file processed */
+    }
+  while (flush != Z_FINISH);
+  assert (ret == Z_STREAM_END);        /* stream will be complete */
 
-    /* clean up and return */
-    (void)deflateEnd(&strm);
-    return Z_OK;
+  /* clean up and return */
+  (void)deflateEnd (&strm);
+  return Z_OK;
 }
 
 /* ===========================================================================
@@ -116,21 +119,22 @@ off_t deflateGZIP(int pack_level)
  * IN assertions: the input and output buffers are cleared.
  *   The variables time_stamp and save_orig_name are initialized.
  */
-int zip(in, out)
-    int in, out;            /* input and output file descriptors */
+int
+zip (int in, int out)
 {
     /* uch  flags = 0;         /1* general purpose bit flags *1/ */
     /* ush  attr = 0;          /1* ascii/binary flag *1/ */
     /* ush  deflate_flags = 0; /1* pkzip -es, -en or -ex equivalent *1/ */
     /* ulg  stamp; */
 
-    ifd = in;
-    ofd = out;
+  ifd = in;
+  ofd = out;
+
     /* outcnt = 0; */
 
     /* Write the header to the gzip file. See algorithm.doc for the format */
 
-    method = DEFLATED;
+  method = DEFLATED;
     /* put_byte(GZIP_MAGIC[0]); /1* magic header *1/ */
     /* put_byte(GZIP_MAGIC[1]); */
     /* put_byte(DEFLATED);      /1* compression method *1/ */
@@ -174,9 +178,9 @@ int zip(in, out)
     /* header_bytes = (off_t)outcnt; */
 
 #ifdef IBM_Z_DFLTCC
-    dfltcc_deflate (level);
+  dfltcc_deflate (level);
 #else
-    deflateGZIP (level);
+  deflateGZIP (level);
 #endif
 
 #ifndef NO_SIZE_CHECK
@@ -195,7 +199,7 @@ int zip(in, out)
     /* header_bytes += 2*4; */
 
     /* flush_outbuf(); */
-    return OK;
+  return OK;
 }
 
 
@@ -204,21 +208,20 @@ int zip(in, out)
  * translation, and update the crc and input file size.
  * IN assertion: size >= 2 (for end-of-line translation)
  */
-int file_read(buf, size)
-    char *buf;
-    unsigned size;
+int
+file_read (char *buf, unsigned size)
 {
-    unsigned len;
+  unsigned len;
 
-    Assert(insize == 0, "inbuf not empty");
+  Assert (insize == 0, "inbuf not empty");
 
-    len = read_buffer (ifd, buf, size);
-    if (len == 0) return (int)len;
-    if (len == (unsigned)-1) {
-        read_error();
-    }
-
-    updcrc ((uch *) buf, len);
-    bytes_in += (off_t)len;
+  len = read_buffer (ifd, buf, size);
+  if (len == 0)
     return (int)len;
+  if (len == (unsigned)-1)
+    read_error();
+
+  updcrc ((uch *) buf, len);
+  bytes_in += (off_t)len;
+  return (int)len;
 }

@@ -3,6 +3,8 @@
 
 static struct buffer_pool in_pool;
 static struct buffer_pool out_pool;
+static struct job_list compress_jobs;
+static struct job_list write_jobs;
 
 void init_pools() {
   // input pool
@@ -11,7 +13,9 @@ void init_pools() {
   in_pool.buffer_size = IN_BUF_SIZE;
   in_pool.num_buffers = 0;
   in_pool.max_buffers = threads * 2;
+
   // output pool
+  // out_pool.lock = ;
   out_pool.head = NULL;
   out_pool.buffer_size = OUT_BUF_SIZE;
   out_pool.num_buffers = 0;
@@ -34,7 +38,25 @@ void parallel_zip(int in, int out) {
   // launch write thread
 
   // start reading
+
+  // join threads - write will be last to finish
   
+  
+}
+
+struct job_list {
+  // lock
+  struct job *head;
+  struct job *tail;
+}
+
+struct job {
+  long seq;
+  struct buffer *in;
+  struct buffer *out;
+  unsigned long check;
+  // lock check_done;
+  struct job *next;
 }
 
 struct buffer_pool {
@@ -47,7 +69,7 @@ struct buffer_pool {
 
 struct buffer {
   // lock
-  char *data;
+  unsigned char *data;
   size_t size;
   struct buffer_pool *pool;
   struct buffer *next;

@@ -1,6 +1,7 @@
 // TODO: error checking on all mallocs
 // TODO: checksumming in write thread
 // TODO: error checking on reads and writes
+// TODO: remove lock from buffer struct
 
 #DEFINE IN_BUF_SIZE = 131072
 #DEFINE OUT_BUF_SIZE = 64000 //????
@@ -10,7 +11,6 @@ static struct buffer_pool out_pool;
 static struct job_list compress_jobs;
 static struct job_list write_jobs;
 static struct job_list free_jobs;
-static struct lock done;
 static int ifd;
 static int ofd;
 
@@ -81,55 +81,64 @@ void write_thread(void* nothing) {
 
 void compress_thread(void* nothing) {
   struct job *job;
-  
-  // get a job from the compress list
-  lock(&compress_jobs.lock);
-  while (compress_jobs.head == NULL) {
-    wait(&compress_jobs.lock);
-  }
-  job = compress_jobs.head;
-  if (compress_jobs.head == compress_jobs.tail) {
-    compress_jobs.tail = NULL;
-  }
-  compress_jobs.head = compress_jobs.head.next;
-  unlock(&compress_jobs.lock);
 
-  // check if this is the last (empty) block
-  job->more = job->in->size;
-  if (job->more) {
-  
-    // compress
+  while (true) {
+    // get a job from the compress list
+    lock(&compress_jobs.lock);
+    while (compress_jobs.head == NULL) {
+      wait(&compress_jobs.lock);
+    }
+    // check if the work is over
+    if (compress_jobs.lock.value != 0) {
+      unlock(&compress_jobs.lock);
+      return;
+    }
+    
+    job = compress_jobs.head;
+    if (compress_jobs.head == compress_jobs.tail) {
+      compress_jobs.tail = NULL;
+    }
+    compress_jobs.head = compress_jobs.head.next;
+    unlock(&compress_jobs.lock);
+    
+    // get an out buffer
     job->out = get_pool(&out_pool);
-
+    
+    // check if this is the last (empty) block
+    job->more = job->in->size;
+    if (job->more) {  
+      
+    }
+    
+    // return in buffer
+    return_buffer(job->in);
+    
+    // put job on the write list
+    lock(&write_jobs.lock);
+    struct job *prev;
+    struct job *cur = write_jobs.head;
+    while (cur != NULL && cur->seq < job->seq) {
+      prev = cur;
+      cur = cur->next;
+    }
+    if (write_jobs.head == NULL) {
+      job->next = NULL;
+      write_jobs.head = job;
+    } else if (cur == write_jobs.head) {
+      job->next = write_jobs.head;
+      write_jobs.head = job;
+    } else {
+      job->next = cur;
+      prev->next = job;
+    }
+    broadcast(&write_jobs.lock);
+    unlock(&write_jobs.lock);
+    
+    // calculate check
+    
+    // unlock check
+    unlock(&job->check_done);
   }
-  
-  // return in buffer
-  return_buffer(job->in);
-  
-  // put job on the write list
-  lock(&write_jobs.lock);
-  struct job *prev;
-  struct job *cur = write_jobs.head;
-  while (cur != NULL && cur->seq < job->seq) {
-    prev = cur;
-    cur = cur->next;
-  }
-  if (write_jobs.head == NULL) {
-    job->next = NULL;
-    write_jobs.head = job;
-  } else if (cur == write_jobs.head) {
-    job->next = write_jobs.head;
-    write_jobs.head = job;
-  } else {
-    job->next = cur;
-    prev->next = job;
-  }
-  broadcast(&write_jobs.lock);
-  unlock(&write_jobs.lock);
-
-  // calculate check
-  // unlock check
-  unlock(&job->check_done);
 }
 
 void parallel_zip(int in, int out) {
@@ -137,17 +146,16 @@ void parallel_zip(int in, int out) {
   ofd = out;
   init_pools();
   init_jobs();
-  // init lock to tell the write thread the last job
-  init_lock(&done);
-  lock(&done);
+
+  // init compression threads array
+  pthread_t *compression_threads = malloc(sizeof(pthread_t) * threads);
 
   // launch write thread
   pthread_t write_thread;
   pthread_create(&write_thread, NULL, write_thread, NULL);
   
-  // launch compress threads
-
   // start reading
+  int threads_compressing = 0;
   size_t read;
   long seq = 0;
   while (true) {
@@ -172,15 +180,24 @@ void parallel_zip(int in, int out) {
       compress_jobs.tail = job;
     }
     unlock(&compress_jobs.lock);
+
+    // launch a compress thread if possible
+    if (threads_compressing < threads) {
+      pthread_create(compression_threads + threads_compressing, NULL, compress_thread, NULL);
+      threads_compressing++;
+    }
     
     if (job->in.size == 0) {
       break;
     }
   }
 
-  // join threads - write will be last to finish
-  
-  
+  // call the threads home
+  pthread_join(write_thread, NULL);
+  lock(&compress_jobs.lock);
+  compress_jobs.lock.value = 1;
+  broadcast(&compress_jobs.lock);
+  unlock(&compress_jobs.lock);
 }
 
 size_t readn(int fd, unsigned char *buf, size_t len) {
@@ -219,6 +236,7 @@ struct lock {
 void init_lock(struct lock *lock) {
   pthread_mutex_init(&lock->mutex, NULL);
   pthread_cond_init(&lock->cond, NULL);
+  lock->value = 0;
 }
 
 int lock(struct lock *lock) {
@@ -291,7 +309,7 @@ struct buffer_pool {
 };
 
 struct buffer {
-  struct lock lock;
+  struct lock lock; // probably unnecessary
   unsigned char *data;
   size_t size;
   struct buffer_pool *pool;

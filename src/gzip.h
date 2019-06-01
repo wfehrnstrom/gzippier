@@ -88,29 +88,17 @@ extern int method;         /* compression method */
 
 
 #ifndef	INBUFSIZE
-#  ifdef SMALL_MEM
-#    define INBUFSIZE 0x2000  /* input buffer size */
-#  else
-#    define INBUFSIZE 0x40000 /* input buffer size */
-#  endif
+#  define INBUFSIZE 0x40000 /* input buffer size */
 #endif
 #define INBUF_EXTRA  64     /* required by unlzw() */
 
 #ifndef	OUTBUFSIZE
-#  ifdef SMALL_MEM
-#    define OUTBUFSIZE   8192  /* output buffer size */
-#  else
-#    define OUTBUFSIZE 0x40000 /* output buffer size */
-#  endif
+#  define OUTBUFSIZE   8192  /* output buffer size */
 #endif
 #define OUTBUF_EXTRA 2048   /* required by unlzw() */
 
 #ifndef DIST_BUFSIZE
-#  ifdef SMALL_MEM
-#    define DIST_BUFSIZE 0x2000 /* buffer for distances, see trees.c */
-#  else
-#    define DIST_BUFSIZE 0x8000 /* buffer for distances, see trees.c */
-#  endif
+#  define DIST_BUFSIZE 0x8000 /* buffer for distances, see trees.c */
 #endif
 
 #ifdef DYN_ALLOC
@@ -206,6 +194,9 @@ typedef int file_t;     /* Do not use stdio */
  * distances are limited to MAX_DIST instead of WSIZE.
  */
 
+#define CHUNK 16384
+/* zlib deflate and inflate chunk size. See zlib docs for more details */
+
 extern int exit_code;      /* program exit code */
 extern int verbose;        /* be verbose (-v) */
 extern int quiet;          /* be quiet (-q) */
@@ -214,8 +205,8 @@ extern int test;           /* check .z file integrity */
 extern int to_stdout;      /* output to stdout (-c) */
 extern int save_orig_name; /* set if original name must be saved */
 
-#define get_byte()  (inptr < insize ? inbuf[inptr++] : fill_inbuf(false))
-#define try_byte()  (inptr < insize ? inbuf[inptr++] : fill_inbuf(true))
+#define get_byte()  (inptr < insize ? inbuf[inptr++] : fill_inbuf(false, CHUNK))
+#define try_byte()  (inptr < insize ? inbuf[inptr++] : fill_inbuf(true, CHUNK))
 
 /* put_byte is used for the compressed output, put_ubyte for the
  * uncompressed output. However unlzw() uses window for its
@@ -312,7 +303,7 @@ extern ulg  updcrc        (const uch *s, unsigned n);
 extern ulg  getcrc        (void) _GL_ATTRIBUTE_PURE;
 extern void setcrc        (ulg c);
 extern void clear_bufs    (void);
-extern int  fill_inbuf    (int eof_ok);
+extern int  fill_inbuf    (int eof_ok, int max_fill);
 extern void flush_outbuf  (void);
 extern void flush_window  (void);
 extern void write_buf     (int fd, voidp buf, unsigned cnt);

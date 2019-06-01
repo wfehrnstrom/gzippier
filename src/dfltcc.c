@@ -346,7 +346,7 @@ dfltcc_deflate (int pack_level)
       /* Read the input data.  */
       if (inptr == insize)
         {
-          if (fill_inbuf (1) == EOF && !param->cf)
+          if (fill_inbuf (true, -1) == EOF && !param->cf)
             break;
           inptr = 0;
         }
@@ -404,7 +404,7 @@ dfltcc_inflate (void)
         flush_outbuf ();
       if (inptr == insize)
         {
-          if (fill_inbuf (1) == EOF)
+          if (fill_inbuf (true, -1) == EOF)
             {
               /* Premature EOF.  */
               return 2;

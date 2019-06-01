@@ -675,7 +675,7 @@ input_eof (void)
 
   if (inptr == insize)
     {
-      if (insize != INBUFSIZE || fill_inbuf (1) == EOF)
+      if (insize != INBUFSIZE || fill_inbuf (true, -1) == EOF)
         return 1;
 
       /* Unget the char that fill_inbuf got.  */
@@ -1551,17 +1551,17 @@ is_pkzip_format (magic_header* h, unsigned inptr, uch *inbuf)
           && memcmp((char*)inbuf, PKZIP_MAGIC, 4) == 0);
 }
 
-static bool
-is_pack_format (magic_header* h)
-{
-  return !memcmp(h->magic, PACK_MAGIC, 2);
-}
+// static bool
+// is_pack_format (magic_header* h)
+// {
+//   return !memcmp(h->magic, PACK_MAGIC, 2);
+// }
 
-static bool
-is_stored_format (void)
-{
-  return (force && to_stdout && !list);
-}
+// static bool
+// is_stored_format (void)
+// {
+//   return (force && to_stdout && !list);
+// }
 
 static bool
 bitmap_contains(uch bitmap, uch code)
@@ -1779,20 +1779,6 @@ get_method (int in)
         /* check_zipfile may get ofname from the local header */
         last_member = 1;
 
-    } else if (is_pack_format(h)) {
-        work = unpack;
-        method = PACKED;
-
-    } else if (is_stored_format()) { /* pass input unchanged */
-        method = STORED;
-        work = copy;
-        if (h->imagic1 != EOF)
-            inptr--;
-        last_member = 1;
-        if (h->imagic0 != EOF) {
-            write_buf (STDOUT_FILENO, h->magic, 1);
-            bytes_out++;
-        }
     }
     if (method >= 0) return method;
     if (part_nb == 1) {

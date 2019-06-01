@@ -37,7 +37,6 @@
 #include <sys/uio.h>
 #include <unistd.h>
 #include <sys/errno.h>
-#define CHUNK 16384
 
 /* PKZIP header definitions */
 #define LOCSIG 0x04034b50L      /* four-byte lead-in (lsb first) */
@@ -113,7 +112,7 @@ check_zipfile (int in)
 /* Inflate using zlib
  */
 int
-inflateGZIP (unsigned char * prev_read)
+inflateGZIP ()
 {
     int ret;
     unsigned writtenOutBytes;

@@ -173,16 +173,25 @@ void clear_bufs()
 
 /* ===========================================================================
  * Fill the input buffer. This is called only when the buffer is empty.
+ * max_fill: if -1, disregard. Otherwise, this is the maximum number of bytes
+ *           to read into the buffer
  */
-int fill_inbuf(eof_ok)
-    int eof_ok;          /* set if EOF acceptable as a result */
+int
+fill_inbuf (int eof_ok, int max_fill)       /* set if EOF acceptable as a result */
 {
     int len;
+    int read_in;
+    if(max_fill > (INBUFSIZE-insize) || max_fill == -1){
+      read_in = INBUFSIZE-insize;
+    }
+    else{
+      read_in = max_fill;
+    }
 
     /* Read as much as possible */
     insize = 0;
     do {
-        len = read_buffer (ifd, (char *) inbuf + insize, INBUFSIZE- insize);
+        len = read_buffer (ifd, (char *) inbuf + insize, read_in);
         if (len == 0) break;
         if (len == -1) {
           read_error();

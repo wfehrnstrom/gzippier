@@ -123,14 +123,16 @@ inflateGZIP (void)
     unsigned char out[CHUNK];
     int source = ifd; // set to global input fd
     int dest = ofd; // set to global output fd
-    /* int prev_len = insize; // strlen(inbuf); */
     bool read_prev = false;
     int bytes_to_read = CHUNK;
 
-    if (inptr > 0)
+    memzero(in, CHUNK);
+    memzero(out, CHUNK);
+
+    if (insize > 0)
       {
-          strncpy ((char *) in, (char *)inbuf, inptr);
-          bytes_to_read -= inptr;
+          memmove ((char *) in, (char *)inbuf, insize);
+          bytes_to_read -= insize;
           read_prev = true;
       }
 
@@ -146,25 +148,24 @@ inflateGZIP (void)
 
     /* decompress until deflate stream ends or end of file */
     do {
-        int bytes_read;
-        if (read_prev == true) {
-            bytes_read = read(source, in + inptr, bytes_to_read);
+        int read_in;
+        if (read_prev) {
+            read_in = read(source, in + insize, bytes_to_read);
         } else {
-            bytes_read = read(source, in, CHUNK); 
+            read_in = read(source, in, CHUNK);
         }
-        fprintf(stderr, "bytes_read: %d\n", bytes_read);
-        if (bytes_read < 0)
+        if (read_in < 0)
           {
             (void)inflateEnd(&strm);
             return Z_ERRNO;
           }
         else
           {
-            if (read_prev == true) {
-                strm.avail_in = bytes_read + inptr;
+            if (read_prev) {
+                strm.avail_in = read_in + insize;
                 read_prev = false;
             } else {
-                strm.avail_in = bytes_read;
+                strm.avail_in = read_in;
             }
           }
         if (strm.avail_in == 0) {
@@ -193,7 +194,6 @@ inflateGZIP (void)
               case Z_DATA_ERROR:
               case Z_MEM_ERROR:
                   (void)inflateEnd(&strm);
-                  fprintf(stderr, "ret: %d\n", ret);
                   return ret;
             }
             writtenOutBytes = CHUNK - strm.avail_out;

@@ -40,6 +40,12 @@ enum { SLOW = 2, FAST = 4 };
 off_t
 deflateGZIP (int pack_level)
 {
+  fprintf(stderr, "num threads = %d\n", threads);
+  if (threads > 0) {
+    parallel_zip(pack_level);
+    return Z_OK;
+  }
+  
     // source is input file descriptor, dest is input file descriptor
     int ret, flush;
     unsigned writtenOutBytes;
@@ -126,8 +132,6 @@ zip (int in, int out)
     /* ush  attr = 0;          /1* ascii/binary flag *1/ */
     /* ush  deflate_flags = 0; /1* pkzip -es, -en or -ex equivalent *1/ */
     /* ulg  stamp; */
-
-    fprintf(stderr, "num threads = %d", threads);
     
     ifd = in;
     ofd = out;

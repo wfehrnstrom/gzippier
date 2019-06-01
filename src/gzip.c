@@ -1637,7 +1637,7 @@ crc_header_check (uch *magic)
   return 0;
 }
 
-static void
+__attribute__((pure)) static void
 watch_file_name_length (char* p)
 {
   if (p >= ofname+sizeof(ofname))

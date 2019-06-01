@@ -21,6 +21,15 @@ static struct job_list compress_jobs;
 static struct job_list write_jobs;
 static struct job_list free_jobs;
 
+
+static void db(char const *str) {
+  fprintf(stderr, "%s\n", str);
+}
+
+static void tb(char const *str) {
+  fprintf(stderr, "%u: %s\n", (unsigned)pthread_self(), str);
+}
+
 static size_t readn(int fd, unsigned char *buf, size_t len) {
   ssize_t result;
   size_t amount = 0;
@@ -99,9 +108,8 @@ struct buffer {
 static struct buffer *get_buffer(struct buffer_pool *pool) {
   struct buffer *result;
   lock(&pool->lock);
-
   // wait until you can create a new buffer or grab an existing one
-  while (pool->head == NULL && pool->num_buffers != 0) {
+  while (pool->head != NULL && pool->num_buffers != 0) {
     wait(&pool->lock);
   }
   
@@ -163,6 +171,7 @@ static struct job *get_job(long seq) {
     // allocate a new job
     result = malloc(sizeof(struct job));
     init_lock(&result->check_done);
+    lock(&result->check_done);
   } else {
     // grab one from the list
     result = free_jobs.head;
@@ -171,7 +180,6 @@ static struct job *get_job(long seq) {
   }
   result->next = NULL;
   result->seq = seq;
-  lock(&result->check_done);
   result->in = get_buffer(&in_pool);
   return result;
 }
@@ -209,6 +217,11 @@ static void init_jobs(void) {
   init_lock(&write_jobs.lock);
   write_jobs.head = NULL;
   write_jobs.tail = NULL;
+
+  // free jobs
+  init_lock(&free_jobs.lock);
+  free_jobs.head = NULL;
+  free_jobs.tail = NULL;
 }
 
 static noreturn void *write_thread(void* nothing) {
@@ -220,6 +233,7 @@ static noreturn void *write_thread(void* nothing) {
     // wait for the next job in sequence
     lock(&write_jobs.lock);
     while (write_jobs.head == NULL || seq != write_jobs.head->seq) {
+      db("write thread bout to wait for a job");
       wait(&write_jobs.lock);
     }
     
@@ -230,24 +244,27 @@ static noreturn void *write_thread(void* nothing) {
       write_jobs.tail = NULL;
     }
     unlock(&write_jobs.lock);
+    db("write thread got a job");
     
     // write data and return out buffer
     writen(ofd, job->out->data, job->out->len);
+    db("1");
     // return the buffer
     return_buffer(job->out);
-    
+    db("2");
     // wait for checksum
-    wait(&job->check_done);
+    lock(&job->check_done);
     // assemble the checksum
-    
+    db("3");
     // return the job
     return_job(job);
+    db("write thread finished a job");
     
     seq++;
   } while (job->more);
 
   // write the trailer
-
+  db("write thread's work is done");
   pthread_exit(NULL);
 }
 
@@ -257,21 +274,24 @@ static noreturn void *compress_thread(void* nothing) {
   for (;;) {
     // get a job from the compress list
     lock(&compress_jobs.lock);
-    while (compress_jobs.head == NULL) {
+    while (compress_jobs.head == NULL && compress_jobs.lock.value == 0) {
       wait(&compress_jobs.lock);
     }
     // check if the work is over
     if (compress_jobs.lock.value != 0) {
+      tb("compress thread's work is done");
       unlock(&compress_jobs.lock);
       pthread_exit(NULL);
     }
-    
+
+    // get a compress job
     job = compress_jobs.head;
     if (compress_jobs.head == compress_jobs.tail) {
       compress_jobs.tail = NULL;
     }
     compress_jobs.head = compress_jobs.head->next;
     unlock(&compress_jobs.lock);
+    tb("compress thread got a job");
     
     // get an out buffer
     job->out = get_buffer(&out_pool);
@@ -289,6 +309,7 @@ static noreturn void *compress_thread(void* nothing) {
     
     // return in buffer
     return_buffer(job->in);
+    tb("compress thread finished job");
     
     // put job on the write list
     lock(&write_jobs.lock);
@@ -310,7 +331,8 @@ static noreturn void *compress_thread(void* nothing) {
     }
     broadcast(&write_jobs.lock);
     unlock(&write_jobs.lock);
-    
+    tb("compress thread put a job on the write list");
+    fprintf(stderr, "seq: %ld\n", job->seq);
     // calculate check
     
     // unlock check
@@ -351,29 +373,37 @@ void parallel_zip(int pack_level) {
       compress_jobs.tail = job;
     }
     unlock(&compress_jobs.lock);
+    db("read thread put a job on the compress list");
 
     // launch a compress thread if possible
     if (threads_compressing < threads) {
       pthread_create(compression_threads_t + threads_compressing, NULL, compress_thread, NULL);
       threads_compressing++;
     }
-    
-    if (job->in->size == 0) {
+
+    fprintf(stderr, "read thread just read %d bytes\n", (int)job->in->len);
+    if (job->in->len == 0) {
+      db("read thread's work is done");
       break;
     }
+
+    seq++;
   }
 
   // call the threads home
   pthread_join(write_thread_t, NULL);
+  db("write thread joined the read thread");
   lock(&compress_jobs.lock);
+  db("read thread got the lock for the compress list");
   compress_jobs.lock.value = 1;
   broadcast(&compress_jobs.lock);
   unlock(&compress_jobs.lock);
+  db("read thread released the lock for the compress list");
   for (int i = 0; i < threads_compressing; i++) {
     pthread_join(compression_threads_t[i], NULL);
+    db("a compress thread just joined the read thread");
   }
 }
-
 
 
 // 2xthreads read buffers, threads write buffers

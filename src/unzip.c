@@ -37,6 +37,8 @@
 #include <sys/uio.h>
 #include <unistd.h>
 #include <sys/errno.h>
+#include <string.h>
+#define CHUNK 16384
 
 /* PKZIP header definitions */
 #define LOCSIG 0x04034b50L      /* four-byte lead-in (lsb first) */
@@ -112,7 +114,7 @@ check_zipfile (int in)
 /* Inflate using zlib
  */
 int
-inflateGZIP ()
+inflateGZIP (void)
 {
     int ret;
     unsigned writtenOutBytes;
@@ -121,6 +123,16 @@ inflateGZIP ()
     unsigned char out[CHUNK];
     int source = ifd; // set to global input fd
     int dest = ofd; // set to global output fd
+    /* int prev_len = insize; // strlen(inbuf); */
+    bool read_prev = false;
+    int bytes_to_read = CHUNK;
+
+    if (inptr > 0)
+      {
+          strncpy ((char *) in, (char *)inbuf, inptr);
+          bytes_to_read -= inptr;
+          read_prev = true;
+      }
 
     /* allocate inflate state */
     strm.zalloc = Z_NULL;
@@ -134,7 +146,12 @@ inflateGZIP ()
 
     /* decompress until deflate stream ends or end of file */
     do {
-        int bytes_read = read(source, in, CHUNK);
+        int bytes_read;
+        if (read_prev == true) {
+            bytes_read = read(source, in + inptr, bytes_to_read);
+        } else {
+            bytes_read = read(source, in, CHUNK); 
+        }
         fprintf(stderr, "bytes_read: %d\n", bytes_read);
         if (bytes_read < 0)
           {
@@ -143,7 +160,12 @@ inflateGZIP ()
           }
         else
           {
-            strm.avail_in = bytes_read;
+            if (read_prev == true) {
+                strm.avail_in = bytes_read + inptr;
+                read_prev = false;
+            } else {
+                strm.avail_in = bytes_read;
+            }
           }
         if (strm.avail_in == 0) {
           break;

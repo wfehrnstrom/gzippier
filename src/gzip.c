@@ -764,9 +764,9 @@ static void treat_stdin (void)
     stdin_was_read = true;
 
     if (decompress) {
-        /* method = get_method(ifd); */
-        method = DEFLATED;
-        work = unzip;
+        method = get_method(ifd);
+        /* method = DEFLATED; */
+        /* work = unzip; */
         if (method < 0) {
             do_exit(exit_code); /* error message already emitted */
         }
@@ -947,7 +947,7 @@ treat_file (char * iname)
 
     if (decompress) {
         method = get_method(ifd); /* updates ofname if original given */
-        lseek(ifd, 0, SEEK_SET);
+        /* lseek(ifd, 0, SEEK_SET); */
         if (method < 0) {
             close(ifd);
             return;               /* error message already emitted */

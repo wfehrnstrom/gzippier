@@ -1551,18 +1551,6 @@ is_pkzip_format (magic_header* h, unsigned inptr, uch *inbuf)
           && memcmp((char*)inbuf, PKZIP_MAGIC, 4) == 0);
 }
 
-// static bool
-// is_pack_format (magic_header* h)
-// {
-//   return !memcmp(h->magic, PACK_MAGIC, 2);
-// }
-
-// static bool
-// is_stored_format (void)
-// {
-//   return (force && to_stdout && !list);
-// }
-
 static bool
 bitmap_contains(uch bitmap, uch code)
 {

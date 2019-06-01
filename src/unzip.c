@@ -113,7 +113,7 @@ check_zipfile (int in)
 /* Inflate using zlib
  */
 int
-inflateGZIP (void)
+inflateGZIP (unsigned char * prev_read)
 {
     int ret;
     unsigned writtenOutBytes;
@@ -136,6 +136,7 @@ inflateGZIP (void)
     /* decompress until deflate stream ends or end of file */
     do {
         int bytes_read = read(source, in, CHUNK);
+        fprintf(stderr, "bytes_read: %d\n", bytes_read);
         if (bytes_read < 0)
           {
             (void)inflateEnd(&strm);
@@ -171,6 +172,7 @@ inflateGZIP (void)
               case Z_DATA_ERROR:
               case Z_MEM_ERROR:
                   (void)inflateEnd(&strm);
+                  fprintf(stderr, "ret: %d\n", ret);
                   return ret;
             }
             writtenOutBytes = CHUNK - strm.avail_out;
@@ -186,7 +188,10 @@ inflateGZIP (void)
   while (ret != Z_STREAM_END);
 
   /* clean up and return */
-  (void) inflateEnd (&strm);
+  int end_ret = inflateEnd (&strm);
+  if (end_ret == Z_STREAM_ERROR) {
+      return Z_STREAM_ERROR;
+  }
   int result = ret == Z_STREAM_END ? Z_OK : Z_DATA_ERROR;
   return result;
 }

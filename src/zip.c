@@ -49,6 +49,9 @@ deflateGZIP (int pack_level)
     int source = ifd;
     int dest = ofd;
 
+    memzero(in, CHUNK);
+    memzero(out, CHUNK);
+
     /* allocate deflate state */
     strm.zalloc = Z_NULL;
     strm.zfree = Z_NULL;
@@ -110,7 +113,10 @@ deflateGZIP (int pack_level)
   assert (ret == Z_STREAM_END);        /* stream will be complete */
 
   /* clean up and return */
-  (void)deflateEnd (&strm);
+  int end_ret = deflateEnd (&strm);
+  if (end_ret == Z_STREAM_ERROR) {
+      return Z_STREAM_ERROR;
+  }
   return Z_OK;
 }
 

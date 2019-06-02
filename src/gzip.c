@@ -947,7 +947,6 @@ treat_file (char * iname)
 
     if (decompress) {
         method = get_method(ifd); /* updates ofname if original given */
-        /* lseek(ifd, 0, SEEK_SET); */
         if (method < 0) {
             close(ifd);
             return;               /* error message already emitted */

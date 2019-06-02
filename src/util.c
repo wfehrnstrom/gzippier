@@ -182,7 +182,7 @@ fill_inbuf (int eof_ok, int max_fill)
 {
     int len;
     int read_in;
-    if(max_fill > (INBUFSIZE-insize) || max_fill == -1){
+    if(max_fill > (INBUFSIZE-insize) || max_fill < 0){
       read_in = INBUFSIZE-insize;
     }
     else{

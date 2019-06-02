@@ -1,24 +1,23 @@
 #!/bin/sh
 
-nbytes=10000000 #default size
-candidates=(gzip bzip2 lzma ./oldgzip)
-
+nbytes=10000000  # default file size
+candidates=(../src/gzip ./oldgzip bzip2 lzma)
 
 while getopts 's:' OPTION; do
-  case "$OPTION" in
+    case "$OPTION" in
     s)
-      nbytes="$OPTARG"
-      ;;
+        nbytes="$OPTARG"
+        ;;
     ?)
-      echo "script usage: $(basename $0) [-s number_of_bytes]" >&2
-      exit 1
-      ;;
-  esac
+        echo "script usage: $(basename $0) [-s number_of_bytes]" >&2
+        exit 1
+        ;;
+    esac
 done
-#shift "$(($OPTIND -1))"
 
+# Get and compile version 1.10 of gzip.
 wget http://ftp.gnu.org/gnu/gzip/gzip-1.10.tar.xz
-tar xf gzip-1.10.tar.xz 
+tar xf gzip-1.10.tar.xz
 cd gzip-1.10
 ./configure
 make all
@@ -37,7 +36,6 @@ do
         progs+=($prog)
     fi
 done
-
 progs+=(./old_gzip)
 
 
@@ -48,14 +46,6 @@ print_header () {
     done
     printf "\n"
 }
-
-
-
-#input=$(wc -c input.txt | sed 's/^[ \t]*//g' | cut -d " " -f 1)
-
-#printf "Input file size: $input\n"
-
-
 
 
 compr_times=()
@@ -114,15 +104,3 @@ done
 
 
 rm -rf input* gzip-1.10* old_gzip
-
-#rm -rf gzip-1.10* old_gzip
-
-
- #if we're doing this, then we'll always need a compressed size, dec_size... * 3.  great.
-
-
-
-
-
-
-

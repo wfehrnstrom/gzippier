@@ -3,11 +3,16 @@
 nbytes=10000000  # default file size
 candidates=(../src/gzip bzip2 lzma) # do not put ./old_gzip here
 sizes=(100 1KB 100KB 1MB)
+kernel_flag=0
 size_flag=0
 file=input
 
-while getopts 's:' OPTION; do
+
+while getopts 'ks:' OPTION; do
     case "$OPTION" in
+    k)
+        kernel_flag=1
+        ;;
     s)
         nbytes="$OPTARG"
         ;;
@@ -74,7 +79,8 @@ print_separator () {
     printf "\n"
 }
 
-basic_eval(){
+# Run compression and decompression tests on the file at 'file'.
+basic_eval() {
 	compr_times=()
 	decompr_times=()
 
@@ -143,16 +149,31 @@ else
 	done
 fi
 
+rm input*
 
 
+file=gzip_bin
 printf "\n"
 print_separator
 cp old_gzip gzip_bin
 gzip_bin_size=$(wc -c gzip_bin | sed 's/^[ \t]*//g' | cut -d " " -f 1)
 printf "Testing on gzip 1.10 binary...\n"
 printf "File size: $gzip_bin_size bytes\n"
-file=gzip_bin
 basic_eval
 
 
-rm -rf input* gzip-1.10* gzip_bin
+if [ $kernel_flag -eq 1 ]
+then
+    file=ubuntu-16.04.iso
+    wget http://mirror.math.princeton.edu/pub/ubuntu-iso/16.04/ubuntu-16.04.6-desktop-amd64.iso -O $file
+    ubuntu_size=$(wc -c $file | sed 's/^[ \t]*//g' | cut -d " " -f 1)
+    printf "\n"
+    print_separator
+    printf "Testing on .iso for Ubunty 16.04 LTS...\n"
+    printf "File size: $ubuntu_size bytes\n"
+    basic_eval
+    rm $file
+fi
+
+
+rm -rf gzip-1.10* gzip_bin

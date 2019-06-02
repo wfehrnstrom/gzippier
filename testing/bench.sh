@@ -53,7 +53,7 @@ generate_random(){
 		generate_size=$1
 	fi
 
-	printf "File size: $generate_size bytes\n"
+	printf "File size: $generate_size\n"
 	head -c $generate_size /dev/urandom > input
 
 }

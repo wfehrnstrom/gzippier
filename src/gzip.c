@@ -1726,8 +1726,20 @@ get_method (int in)
         /* check_zipfile may get ofname from the local header */
         last_member = 1;
 
+    } else if (force && to_stdout && !list) { /* pass input unchanged */
+        method = STORED;
+        work = copy;
+        if (h->imagic1 != EOF)
+            inptr--;
+        last_member = 1;
+        if (h->imagic0 != EOF) {
+            write_buf (STDOUT_FILENO, h->magic, 1);
+            bytes_out++;
+        }
     }
+
     if (method >= 0) return method;
+
     if (part_nb == 1) {
         fprintf (stderr, "\n%s: %s: not in gzip format\n",
                  program_name, ifname);

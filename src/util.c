@@ -199,7 +199,7 @@ fill_inbuf (int eof_ok, int max_fill)
           break;
         }
         insize += len;
-    } while (insize < INBUFSIZE);
+    } while (insize < INBUFSIZE && insize < max_fill);
 
     if (insize == 0) {
         if (eof_ok) return EOF;

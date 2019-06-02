@@ -109,9 +109,11 @@ static struct buffer *get_buffer(struct buffer_pool *pool) {
   struct buffer *result;
   lock(&pool->lock);
   // wait until you can create a new buffer or grab an existing one
-  while (pool->head != NULL && pool->num_buffers != 0) {
+  fprintf(stderr, "This pool has %d buffers and its head is %p\n", pool->num_buffers, pool->head);
+  while (pool->num_buffers == 0) {
     wait(&pool->lock);
   }
+  db("there was a buffer available");
   
   if (pool->head == NULL) {
     // allocate a new buffer
@@ -135,10 +137,12 @@ static void return_buffer(struct buffer *buffer) {
   struct buffer_pool *pool = buffer->pool;
   buffer->len = 0;
   lock(&pool->lock);
-
+  db("i'm returning a buffer");
   buffer->next = pool->head;
   pool->head = buffer;
+  fprintf(stderr, "num_Buffers before return %d\n", pool->num_buffers);
   pool->num_buffers++;
+  fprintf(stderr, "num_Buffers after return %d\n", pool->num_buffers);
 
   broadcast(&pool->lock);
   unlock(&pool->lock);
@@ -164,15 +168,18 @@ struct job {
 
 static struct job *get_job(long seq) {
   struct job* result;
+  db("waiting for job list lock");
   lock(&free_jobs.lock);
-
+  db("got job list lock");
   if (free_jobs.head == NULL) {
+    db("allocating new job");
     unlock(&free_jobs.lock);
     // allocate a new job
     result = malloc(sizeof(struct job));
     init_lock(&result->check_done);
     lock(&result->check_done);
   } else {
+    db("recycling old job");
     // grab one from the list
     result = free_jobs.head;
     free_jobs.head = free_jobs.head->next;
@@ -180,7 +187,9 @@ static struct job *get_job(long seq) {
   }
   result->next = NULL;
   result->seq = seq;
+  db("getting in buffer for new job");
   result->in = get_buffer(&in_pool);
+  db("got in buffer for new job");
   return result;
 }
 
@@ -362,6 +371,7 @@ void parallel_zip(int pack_level) {
     // read into it
     job->in->len = readn(ifd, job->in->data, IN_BUF_SIZE);
     job->more = job->in->len;
+    fprintf(stderr, "read thread just read %d bytes\n", (int)job->in->len);
     
     // put it on the back of the compress list
     lock(&compress_jobs.lock);
@@ -372,6 +382,7 @@ void parallel_zip(int pack_level) {
       compress_jobs.tail->next = job;
       compress_jobs.tail = job;
     }
+    broadcast(&compress_jobs.lock);
     unlock(&compress_jobs.lock);
     db("read thread put a job on the compress list");
 
@@ -380,8 +391,7 @@ void parallel_zip(int pack_level) {
       pthread_create(compression_threads_t + threads_compressing, NULL, compress_thread, NULL);
       threads_compressing++;
     }
-
-    fprintf(stderr, "read thread just read %d bytes\n", (int)job->in->len);
+    
     if (job->in->len == 0) {
       db("read thread's work is done");
       break;

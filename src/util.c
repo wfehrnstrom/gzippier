@@ -193,13 +193,16 @@ fill_inbuf (int eof_ok, int max_fill)
     insize = 0;
     do {
         len = read_buffer (ifd, (char *) inbuf + insize, read_in);
-        if (len == 0) break;
+        if (len == 0) {
+          break;
+        }
         if (len == -1) {
           read_error();
           break;
         }
         insize += len;
-    } while (insize < INBUFSIZE);
+        read_in -= len;
+    } while (insize < INBUFSIZE && insize < read_in);
 
     if (insize == 0) {
         if (eof_ok) return EOF;

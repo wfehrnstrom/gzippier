@@ -986,12 +986,13 @@ treat_file (char * iname)
             method = -1; /* force cleanup */
             break;
         }
+        break;
 
-        if (input_eof ())
-          break;
+        /* if (input_eof ()) */
+        /*   break; */
 
-        method = get_method(ifd);
-        if (method < 0) break;    /* error message already emitted */
+        /* method = get_method(ifd); */
+        /* if (method < 0) break;    /1* error message already emitted *1/ */
         bytes_out = 0;            /* required for length check */
     }
 

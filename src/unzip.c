@@ -166,6 +166,7 @@ inflateGZIP (void)
                 read_prev = false;
             } else {
                 strm.avail_in = read_in;
+                /* insize += read_in; */
             }
           }
         if (strm.avail_in == 0) {

@@ -765,8 +765,6 @@ static void treat_stdin (void)
 
     if (decompress) {
         method = get_method(ifd);
-        /* method = DEFLATED; */
-        /* work = unzip; */
         if (method < 0) {
             do_exit(exit_code); /* error message already emitted */
         }

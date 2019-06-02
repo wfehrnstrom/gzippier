@@ -27,6 +27,7 @@
 /lib/warn-on-use.h
 /libver.a
 /src/libver.a
+/testing/old_gzip
 /maint.mk
 /maint.mk
 /version.[ch]

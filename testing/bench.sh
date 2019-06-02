@@ -18,13 +18,16 @@ while getopts 's:' OPTION; do
 done
 
 # Get and compile version 1.10 of gzip.
-wget http://ftp.gnu.org/gnu/gzip/gzip-1.10.tar.xz
-tar xf gzip-1.10.tar.xz
-cd gzip-1.10
-./configure
-make all
-mv gzip ../old_gzip
-cd ..
+if [[ ! $(command -v ./old_gzip) ]]
+then
+    wget http://ftp.gnu.org/gnu/gzip/gzip-1.10.tar.xz
+    tar xf gzip-1.10.tar.xz
+    cd gzip-1.10
+    ./configure
+    make all
+    mv gzip ../old_gzip
+    cd ..
+fi
 
 
 progs=()
@@ -46,7 +49,7 @@ generate_random(){
 	else
 		generate_size=$1
 	fi
-	
+
 	printf "File size: $generate_size bytes\n"
 	head -c $generate_size /dev/urandom > input
 
@@ -75,7 +78,7 @@ basic_eval(){
 	    do
 	        compr_time=$((time $prog -$i input) 2>&1 | sed '2q;d' | cut -f 2)
 	        compr_size=$(wc -c input* | sed 's/^[ \t]*//g' | cut -d " " -f 1)
-	        printf "\t\t$compr_size"
+	        printf "\t\t$compr_size\t"
 	        decompr_time=$((time $prog -$i -d input*) 2>&1 | sed '2q;d' | cut -f 2)
 
 	        compr_times+=($compr_time)
@@ -94,7 +97,7 @@ basic_eval(){
 	    printf "$i\t"
 	    for prog in "${progs[@]}"
 	    do
-	        printf "\t${compr_times[$n]}"
+	        printf "\t${compr_times[$n]}\t"
 	        n=$((n+1))
 	    done
 	    printf "\n"
@@ -110,7 +113,7 @@ basic_eval(){
 	    printf "$i\t"
 	    for prog in "${progs[@]}"
 	    do
-	        printf "\t${decompr_times[$n]}"
+	        printf "\t${decompr_times[$n]}\t"
 	        n=$((n+1))
 	    done
 	    printf "\n"
@@ -121,7 +124,7 @@ if [ $size_flag -eq 1 ]
 then
 	generate_random
 	basic_eval
-else 
+else
 	for size in "${sizes[@]}"
 	do
 		generate_random $size
@@ -131,4 +134,4 @@ else
 fi
 
 
-rm -rf input* gzip-1.10* old_gzip
+rm -rf input* gzip-1.10*

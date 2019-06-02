@@ -1729,13 +1729,6 @@ get_method (int in)
     } else if (force && to_stdout && !list) { /* pass input unchanged */
         method = STORED;
         work = copy;
-        if (h->imagic1 != EOF)
-            inptr--;
-        last_member = 1;
-        if (h->imagic0 != EOF) {
-            write_buf (STDOUT_FILENO, h->magic, 1);
-            bytes_out++;
-        }
     }
 
     if (method >= 0) return method;

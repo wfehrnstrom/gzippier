@@ -320,7 +320,6 @@ static noreturn void try_help (void);
 static void help         (void);
 static void license      (void);
 static void version      (void);
-static int input_eof	 (void);
 static void treat_stdin  (void);
 static void treat_file   (char *iname);
 static int create_outfile (void);
@@ -666,25 +665,6 @@ main (int argc, char **argv)
     do_exit(exit_code);
 }
 
-/* Return nonzero when at end of file on input.  */
-static int
-input_eof (void)
-{
-  if (!decompress || last_member)
-    return 1;
-
-  if (inptr == insize)
-    {
-      if (insize != INBUFSIZE || fill_inbuf (true, -1) == EOF)
-        return 1;
-
-      /* Unget the char that fill_inbuf got.  */
-      inptr = 0;
-    }
-
-  return 0;
-}
-
 static void
 get_input_size_and_time (void)
 {
@@ -774,19 +754,13 @@ static void treat_stdin (void)
         return;
     }
 
-    /* Actually do the compression/decompression. Loop over zipped members.
+    /* Actually do the compression/decompression. zlib loops over zipped members
+     * internally.
      */
-    for (;;) {
-        if (work (STDIN_FILENO, STDOUT_FILENO) != OK)
-          return;
+    if (work (STDIN_FILENO, STDOUT_FILENO) != OK)
+      return;
 
-        if (input_eof ())
-          break;
-
-        method = get_method(ifd);
-        if (method < 0) return; /* error message already emitted */
-        bytes_out = 0;            /* required for length check */
-    }
+    bytes_out = 0;  /* required for length check */
 
     if (verbose) {
         if (test) {
@@ -979,22 +953,14 @@ treat_file (char * iname)
         fprintf(stderr, "%s:\t", ifname);
     }
 
-    /* Actually do the compression/decompression. Loop over zipped members.
+    /* Actually do the compression/decompression. zlib loops over zipped members
+       internally, so don't worry about that here.
      */
-    for (;;) {
-        if ((*work)(ifd, ofd) != OK) {
-            method = -1; /* force cleanup */
-            break;
-        }
-        break;
-
-        /* if (input_eof ()) */
-        /*   break; */
-
-        /* method = get_method(ifd); */
-        /* if (method < 0) break;    /1* error message already emitted *1/ */
-        bytes_out = 0;            /* required for length check */
+    if ((*work)(ifd, ofd) != OK) {
+        method = -1; /* force cleanup */
     }
+
+    bytes_out = 0;            /* required for length check */
 
     if (close (ifd) != 0)
       read_error ();
@@ -1670,11 +1636,6 @@ ignore_trailing_null_bytes(int imagic1)
 static int
 get_method (int in)
 {
-    // uch flags;     /* compression flags */
-    // uch magic[10]; /* magic header */
-    // int imagic0;   /* first magic byte or EOF */
-    // int imagic1;   /* like magic[1], but can represent EOF */
-    // ulg stamp;     /* timestamp */
     magic_header* h = malloc(sizeof (magic_header));
     memzero(h, sizeof (magic_header));
     set_magic_header_type(h);

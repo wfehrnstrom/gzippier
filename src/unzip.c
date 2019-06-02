@@ -208,7 +208,6 @@ inflateGZIP (void)
       /* done when inflate() says it's done */
     }
   while (ret != Z_STREAM_END);
-
   /* clean up and return */
   int end_ret = inflateEnd (&strm);
   if (end_ret == Z_STREAM_ERROR) {

@@ -2,8 +2,9 @@
 
 nbytes=10000000  # default file size
 candidates=(../src/gzip bzip2 lzma) # do not put ./old_gzip here
-sizes=(10000 100 10)
+sizes=(100 1KB 100KB 1MB)
 size_flag=0
+file=input
 
 while getopts 's:' OPTION; do
     case "$OPTION" in
@@ -42,7 +43,9 @@ progs+=(./old_gzip)
 
 generate_random(){
 	generate_size=0
-	printf "\nGenerating input file...\n"
+	printf "\n"
+        print_separator
+        printf "Generating input file...\n"
 	if [ $size_flag -eq 1 ]
 	then
 		generate_size=$nbytes
@@ -63,6 +66,13 @@ print_header () {
     printf "\n"
 }
 
+print_separator () {
+    for i in {1..80}
+    do
+        printf "="
+    done
+    printf "\n"
+}
 
 basic_eval(){
 	compr_times=()
@@ -76,10 +86,10 @@ basic_eval(){
 	    printf "$i"
 	    for prog in "${progs[@]}"
 	    do
-	        compr_time=$((time $prog -$i input) 2>&1 | sed '2q;d' | cut -f 2)
-	        compr_size=$(wc -c input* | sed 's/^[ \t]*//g' | cut -d " " -f 1)
+	        compr_time=$((time $prog -$i $file) 2>&1 | sed '2q;d' | cut -f 2)
+	        compr_size=$(wc -c $file* | sed 's/^[ \t]*//g' | cut -d " " -f 1)
 	        printf "\t\t$compr_size\t"
-	        decompr_time=$((time $prog -$i -d input*) 2>&1 | sed '2q;d' | cut -f 2)
+	        decompr_time=$((time $prog -$i -d $file*) 2>&1 | sed '2q;d' | cut -f 2)
 
 	        compr_times+=($compr_time)
 	        decompr_times+=($decompr_time)
@@ -122,8 +132,8 @@ basic_eval(){
 
 if [ $size_flag -eq 1 ]
 then
-	generate_random
-	basic_eval
+    generate_random
+    basic_eval
 else
 	for size in "${sizes[@]}"
 	do
@@ -134,4 +144,15 @@ else
 fi
 
 
-rm -rf input* gzip-1.10*
+
+printf "\n"
+print_separator
+cp old_gzip gzip_bin
+gzip_bin_size=$(wc -c gzip_bin | sed 's/^[ \t]*//g' | cut -d " " -f 1)
+printf "Testing on gzip 1.10 binary...\n"
+printf "File size: $gzip_bin_size bytes\n"
+file=gzip_bin
+basic_eval
+
+
+rm -rf input* gzip-1.10* gzip_bin

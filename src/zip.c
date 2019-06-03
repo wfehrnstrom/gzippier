@@ -40,7 +40,6 @@ enum { SLOW = 2, FAST = 4 };
 off_t
 deflateGZIP (int pack_level)
 {
-  fprintf(stderr, "num threads = %d\n", threads);
   if (threads > 0) {
     parallel_zip(pack_level);
     return Z_OK;

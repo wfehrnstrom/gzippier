@@ -1,10 +1,6 @@
 // TODO: error checking on all mallocs
-// TODO: checksumming in write thread
 // TODO: error checking on reads and writes
-// TODO: remove lock from buffer struct
 // TODO: add error check to zlib functions
-// TODO: think about buffer growth algorithm
-// TODO: remove dict pool
 // TODO: clean up the in buffer of the last job
 
 #include <stdint.h>
@@ -178,9 +174,31 @@ static void return_buffer(struct buffer *buffer) {
   unlock(&pool->lock);
 }
 
+static inline size_t grow(size_t size) {
+  size_t was = size;
+  size_t top;
+  int shift;
+
+  size += size >> 2;
+  top = size;
+  for (shift = 0; top > 7; shift++) {
+    top >>= 1;
+  }
+  if (top == 7) {
+    size = (size_t)1 << (shift + 3);
+  }
+  if (size < 16) {
+    size = 16;
+  }
+  if (size <= was) {
+    size = (size_t)0 - 1;
+  }
+  return size;
+}
+
 static void grow_buffer(struct buffer *buffer) {
-  buffer->data = realloc(buffer->data, buffer->size * 2);
-  buffer->size = buffer->size * 2;
+  buffer->size = grow(buffer->size);
+  buffer->data = realloc(buffer->data, buffer->size);
 }
 
 // Jobs and helpers

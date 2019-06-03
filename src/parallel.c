@@ -6,7 +6,6 @@
 // TODO: think about buffer growth algorithm
 // TODO: remove dict pool
 // TODO: clean up the in buffer of the last job
-// TODO: add name
 
 #include <stdint.h>
 #include <pthread.h>
@@ -20,7 +19,7 @@
 #include <time.h>
 
 #define IN_BUF_SIZE 131072
-#define OUT_BUF_SIZE 32768 //????
+#define OUT_BUF_SIZE 32768
 #define DICTIONARY_SIZE 32768
 #define MAXP2 (UINT_MAX - (UINT_MAX >> 1))
 
@@ -378,9 +377,9 @@ static noreturn void *write_thread(void* nothing) {
   unsigned long check = crc32z(0L, Z_NULL, 0);
   
   // write the header
-  struct gzip_header header = create_header("zero", 0, pack_level);
+  struct gzip_header header = create_header(ifname, 0, pack_level);
   writen(ofd, (unsigned char *)&header, sizeof(header) - 2);
-  writen(ofd, (unsigned char const *)"zero", strlen("zero") + 1);
+  writen(ofd, (unsigned char *)ifname, strlen(ifname) + 1);
   size_t ulen = 0;
   
   long seq = 0;

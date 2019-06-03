@@ -37,6 +37,7 @@
 #include <sys/uio.h>
 #include <unistd.h>
 #include <sys/errno.h>
+#include <string.h>
 #define CHUNK 16384
 
 /* PKZIP header definitions */
@@ -122,6 +123,18 @@ inflateGZIP (void)
     unsigned char out[CHUNK];
     int source = ifd; // set to global input fd
     int dest = ofd; // set to global output fd
+    bool read_prev = false;
+    int bytes_to_read = CHUNK;
+
+    memzero(in, CHUNK);
+    memzero(out, CHUNK);
+
+    if (insize > 0)
+      {
+          memmove ((char *) in, (char *)inbuf, insize);
+          bytes_to_read -= insize;
+          read_prev = true;
+      }
 
     /* allocate inflate state */
     strm.zalloc = Z_NULL;
@@ -135,15 +148,25 @@ inflateGZIP (void)
     
     /* decompress until deflate stream ends or end of file */
     do {
-        int bytes_read = read(source, in, CHUNK);
-        if (bytes_read < 0)
+        int read_in;
+        if (read_prev) {
+            read_in = read(source, in + insize, bytes_to_read);
+        } else {
+            read_in = read(source, in, CHUNK);
+        }
+        if (read_in < 0)
           {
             (void)inflateEnd(&strm);
             return Z_ERRNO;
           }
         else
           {
-            strm.avail_in = bytes_read;
+            if (read_prev) {
+                strm.avail_in = read_in + insize;
+                read_prev = false;
+            } else {
+                strm.avail_in = read_in;
+            }
           }
         if (strm.avail_in == 0) {
           break;
@@ -184,9 +207,11 @@ inflateGZIP (void)
       /* done when inflate() says it's done */
     }
   while (ret != Z_STREAM_END);
-
   /* clean up and return */
-  (void) inflateEnd (&strm);
+  int end_ret = inflateEnd (&strm);
+  if (end_ret == Z_STREAM_ERROR) {
+      return Z_STREAM_ERROR;
+  }
   int result = ret == Z_STREAM_END ? Z_OK : Z_DATA_ERROR;
   return result;
 }

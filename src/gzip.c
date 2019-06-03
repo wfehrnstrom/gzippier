@@ -179,7 +179,7 @@ static int ascii = 0;        /* convert end-of-lines to local OS conventions */
 static int decompress = 0;   /* decompress (-d) */
 static int force = 0;        /* don't ask questions, compress links (-f) */
 static int keep = 0;         /* keep (don't delete) input files */
-static int no_name = -1;     /* don't save or restore the original file name */
+       int no_name = -1;     /* don't save or restore the original file name */
 static int no_time = -1;     /* don't save or restore the original file time */
 static int recursive = 0;    /* recurse through directories (-r) */
 static int list = 0;         /* list the file contents (-l) */
@@ -320,7 +320,6 @@ static noreturn void try_help (void);
 static void help         (void);
 static void license      (void);
 static void version      (void);
-static int input_eof	 (void);
 static void treat_stdin  (void);
 static void treat_file   (char *iname);
 static int create_outfile (void);
@@ -666,25 +665,6 @@ main (int argc, char **argv)
     do_exit(exit_code);
 }
 
-/* Return nonzero when at end of file on input.  */
-static int
-input_eof (void)
-{
-  if (!decompress || last_member)
-    return 1;
-
-  if (inptr == insize)
-    {
-      if (insize != INBUFSIZE || fill_inbuf (1) == EOF)
-        return 1;
-
-      /* Unget the char that fill_inbuf got.  */
-      inptr = 0;
-    }
-
-  return 0;
-}
-
 static void
 get_input_size_and_time (void)
 {
@@ -774,19 +754,13 @@ static void treat_stdin (void)
         return;
     }
 
-    /* Actually do the compression/decompression. Loop over zipped members.
+    /* Actually do the compression/decompression. zlib loops over zipped members
+     * internally.
      */
-    for (;;) {
-        if (work (STDIN_FILENO, STDOUT_FILENO) != OK)
-          return;
+    if (work (STDIN_FILENO, STDOUT_FILENO) != OK)
+      return;
 
-        if (input_eof ())
-          break;
-
-        method = get_method(ifd);
-        if (method < 0) return; /* error message already emitted */
-        bytes_out = 0;            /* required for length check */
-    }
+    bytes_out = 0;  /* required for length check */
 
     if (verbose) {
         if (test) {
@@ -945,7 +919,6 @@ treat_file (char * iname)
 
     if (decompress) {
         method = get_method(ifd); /* updates ofname if original given */
-        lseek(ifd, 0, SEEK_SET);
         if (method < 0) {
             close(ifd);
             return;               /* error message already emitted */
@@ -980,21 +953,14 @@ treat_file (char * iname)
         fprintf(stderr, "%s:\t", ifname);
     }
 
-    /* Actually do the compression/decompression. Loop over zipped members.
+    /* Actually do the compression/decompression. zlib loops over zipped members
+       internally, so don't worry about that here.
      */
-    for (;;) {
-        if ((*work)(ifd, ofd) != OK) {
-            method = -1; /* force cleanup */
-            break;
-        }
-
-        if (input_eof ())
-          break;
-
-        method = get_method(ifd);
-        if (method < 0) break;    /* error message already emitted */
-        bytes_out = 0;            /* required for length check */
+    if ((*work)(ifd, ofd) != OK) {
+        method = -1; /* force cleanup */
     }
+
+    bytes_out = 0;            /* required for length check */
 
     if (close (ifd) != 0)
       read_error ();
@@ -1550,18 +1516,6 @@ is_pkzip_format (magic_header* h, unsigned inptr, uch *inbuf)
 }
 
 static bool
-is_pack_format (magic_header* h)
-{
-  return !memcmp(h->magic, PACK_MAGIC, 2);
-}
-
-static bool
-is_stored_format (void)
-{
-  return (force && to_stdout && !list);
-}
-
-static bool
 bitmap_contains(uch bitmap, uch code)
 {
   return (bitmap & code);
@@ -1682,11 +1636,6 @@ ignore_trailing_null_bytes(int imagic1)
 static int
 get_method (int in)
 {
-    // uch flags;     /* compression flags */
-    // uch magic[10]; /* magic header */
-    // int imagic0;   /* first magic byte or EOF */
-    // int imagic1;   /* like magic[1], but can represent EOF */
-    // ulg stamp;     /* timestamp */
     magic_header* h = malloc(sizeof (magic_header));
     memzero(h, sizeof (magic_header));
     set_magic_header_type(h);
@@ -1777,22 +1726,13 @@ get_method (int in)
         /* check_zipfile may get ofname from the local header */
         last_member = 1;
 
-    } else if (is_pack_format(h)) {
-        work = unpack;
-        method = PACKED;
-
-    } else if (is_stored_format()) { /* pass input unchanged */
+    } else if (force && to_stdout && !list) { /* pass input unchanged */
         method = STORED;
         work = copy;
-        if (h->imagic1 != EOF)
-            inptr--;
-        last_member = 1;
-        if (h->imagic0 != EOF) {
-            write_buf (STDOUT_FILENO, h->magic, 1);
-            bytes_out++;
-        }
     }
+
     if (method >= 0) return method;
+
     if (part_nb == 1) {
         fprintf (stderr, "\n%s: %s: not in gzip format\n",
                  program_name, ifname);

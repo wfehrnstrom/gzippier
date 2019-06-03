@@ -134,7 +134,7 @@ zip (int in, int out)
 
   method = DEFLATED;
 
-  if(!(0 < time_stamp.tv_sec && time_stamp.tv_sec <= 0xffffffff))
+  if(!(0 < time_stamp.tv_sec && time_stamp.tv_sec <= 0xffffffff) && !no_name)
     {
       /* It's intended that timestamp 0 generates this warning,
          since gzip format reserves 0 for something else.  */

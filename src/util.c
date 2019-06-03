@@ -33,7 +33,7 @@
 #include <xalloc.h>
 
 #ifndef CHAR_BIT
-#  define CHAR_BIT 8
+#define CHAR_BIT 8
 #endif
 
 static int write_buffer (int, voidp, unsigned int);
@@ -104,45 +104,52 @@ static ulg crc = 0xffffffffL;
  * IN assertion: insize bytes have already been read in inbuf and inptr bytes
  * already processed or copied.
  */
-int copy(int source, int dest) /* input and output file descriptors */
+int
+copy (int source, int dest)	/* input and output file descriptors */
 {
-    unsigned char in[CHUNK];
-    bool read_prev = false;
-    int bytes_to_read = CHUNK;
-    int COPY_ERROR = -1;
+  unsigned char in[CHUNK];
+  bool read_prev = false;
+  int bytes_to_read = CHUNK;
+  int COPY_ERROR = -1;
 
-    memzero(in, CHUNK);
+  memzero (in, CHUNK);
 
-    if (insize > 0)
-      {
-        memmove ((char *) in, (char *) inbuf, insize);
-        bytes_to_read -= insize;
-        read_prev = true;
-      }
+  if (insize > 0)
+    {
+      memmove ((char *) in, (char *) inbuf, insize);
+      bytes_to_read -= insize;
+      read_prev = true;
+    }
 
-    int read_in;
-    int bytes_written;
-    do {
-        if (read_prev) {
-            read_in = read(source, in + insize, bytes_to_read);
-            bytes_to_read = CHUNK;
-        } else {
-            read_in = read(source, in, bytes_to_read);
-        }
+  int read_in;
+  int bytes_written;
+  do
+    {
+      if (read_prev)
+	{
+	  read_in = read (source, in + insize, bytes_to_read);
+	  bytes_to_read = CHUNK;
+	}
+      else
+	{
+	  read_in = read (source, in, bytes_to_read);
+	}
 
-        if (read_in < 0)
-          {
-            return COPY_ERROR;
-          }
+      if (read_in < 0)
+	{
+	  return COPY_ERROR;
+	}
 
-        read_in += insize;
-        bytes_written = write(dest, in, read_in);
-        if (bytes_written != read_in) {
-            return COPY_ERROR;
-        }
-    } while (read_in == bytes_to_read);
+      read_in += insize;
+      bytes_written = write (dest, in, read_in);
+      if (bytes_written != read_in)
+	{
+	  return COPY_ERROR;
+	}
+    }
+  while (read_in == bytes_to_read);
 
-    return OK;
+  return OK;
 }
 
 /* ===========================================================================
@@ -153,20 +160,26 @@ int copy(int source, int dest) /* input and output file descriptors */
  /* s: pointer to bytes to pump through */
  /* n: number of bytes in s[] */
 ulg
-updcrc(const uch *s, unsigned n)
+updcrc (const uch * s, unsigned n)
 {
-    register ulg c;         /* temporary variable */
+  register ulg c;		/* temporary variable */
 
-    if (s == NULL) {
-        c = 0xffffffffL;
-    } else {
-        c = crc;
-        if (n) do {
-            c = crc_32_tab[((int)c ^ (*s++)) & 0xff] ^ (c >> 8);
-        } while (--n);
+  if (s == NULL)
+    {
+      c = 0xffffffffL;
     }
-    crc = c;
-    return c ^ 0xffffffffL;       /* (instead of ~c for 64-bit machines) */
+  else
+    {
+      c = crc;
+      if (n)
+	do
+	  {
+	    c = crc_32_tab[((int) c ^ (*s++)) & 0xff] ^ (c >> 8);
+	  }
+	while (--n);
+    }
+  crc = c;
+  return c ^ 0xffffffffL;	/* (instead of ~c for 64-bit machines) */
 }
 
 /* Return a current CRC value.  */
@@ -186,11 +199,12 @@ setcrc (ulg c)
 /* ===========================================================================
  * Clear input and output buffers
  */
-void clear_bufs()
+void
+clear_bufs ()
 {
-    outcnt = 0;
-    insize = inptr = 0;
-    bytes_in = bytes_out = 0L;
+  outcnt = 0;
+  insize = inptr = 0;
+  bytes_in = bytes_out = 0L;
 }
 
 /* ===========================================================================
@@ -202,42 +216,50 @@ void clear_bufs()
 int
 fill_inbuf (int eof_ok, int max_fill)
 {
-    int len;
-    int read_in;
-    if(max_fill > (INBUFSIZE-insize) || max_fill < 0){
-      read_in = INBUFSIZE-insize;
+  int len;
+  int read_in;
+  if (max_fill > (INBUFSIZE - insize) || max_fill < 0)
+    {
+      read_in = INBUFSIZE - insize;
     }
-    else{
+  else
+    {
       read_in = max_fill;
     }
 
-    /* Read as much as possible */
-    insize = 0;
-    do {
-        len = read_buffer (ifd, (char *) inbuf + insize, read_in);
-        if (len == 0) {
-          break;
-        }
-        if (len == -1) {
-          read_error();
-          break;
-        }
-        insize += len;
-        read_in -= len;
-    } while (insize < INBUFSIZE && insize < read_in);
-
-    if (insize == 0) {
-        if (eof_ok) return EOF;
-        flush_window();
-        errno = 0;
-        read_error();
+  /* Read as much as possible */
+  insize = 0;
+  do
+    {
+      len = read_buffer (ifd, (char *) inbuf + insize, read_in);
+      if (len == 0)
+	{
+	  break;
+	}
+      if (len == -1)
+	{
+	  read_error ();
+	  break;
+	}
+      insize += len;
+      read_in -= len;
     }
-    bytes_in += (off_t)insize;
-    /* since we are reading in one byte of the new inbuf, we set the inptr
-     * to the next byte
-     */
-    inptr = 1;
-    return inbuf[0];
+  while (insize < INBUFSIZE && insize < read_in);
+
+  if (insize == 0)
+    {
+      if (eof_ok)
+	return EOF;
+      flush_window ();
+      errno = 0;
+      read_error ();
+    }
+  bytes_in += (off_t) insize;
+  /* since we are reading in one byte of the new inbuf, we set the inptr
+   * to the next byte
+   */
+  inptr = 1;
+  return inbuf[0];
 }
 
 /* Like the standard read function, except do not attempt to read more
@@ -260,12 +282,12 @@ read_buffer (fd, buf, cnt)
     {
       int flags = fcntl (fd, F_GETFL);
       if (0 <= flags)
-        {
-          if (! (flags & O_NONBLOCK))
-            errno = EAGAIN;
-          else if (fcntl (fd, F_SETFL, flags & ~O_NONBLOCK) != -1)
-            len = read (fd, buf, cnt);
-        }
+	{
+	  if (!(flags & O_NONBLOCK))
+	    errno = EAGAIN;
+	  else if (fcntl (fd, F_SETFL, flags & ~O_NONBLOCK) != -1)
+	    len = read (fd, buf, cnt);
+	}
     }
 #endif
 
@@ -288,62 +310,71 @@ write_buffer (fd, buf, cnt)
  * Write the output buffer outbuf[0..outcnt-1] and update bytes_out.
  * (used for the compressed data only)
  */
-void flush_outbuf()
+void
+flush_outbuf ()
 {
-    if (outcnt == 0) return;
+  if (outcnt == 0)
+    return;
 
-    if (!test)
-      write_buf (ofd, outbuf, outcnt);
-    bytes_out += (off_t)outcnt;
-    outcnt = 0;
+  if (!test)
+    write_buf (ofd, outbuf, outcnt);
+  bytes_out += (off_t) outcnt;
+  outcnt = 0;
 }
 
 /* ===========================================================================
  * Write the output window window[0..outcnt-1] and update crc and bytes_out.
  * (Used for the decompressed data only.)
  */
-void flush_window()
+void
+flush_window ()
 {
-    if (outcnt == 0) return;
-    updcrc(window, outcnt);
+  if (outcnt == 0)
+    return;
+  updcrc (window, outcnt);
 
-    if (!test) {
-        write_buf(ofd, (char *)window, outcnt);
+  if (!test)
+    {
+      write_buf (ofd, (char *) window, outcnt);
     }
-    bytes_out += (off_t)outcnt;
-    outcnt = 0;
+  bytes_out += (off_t) outcnt;
+  outcnt = 0;
 }
 
 /* ===========================================================================
  * Does the same as write(), but also handles partial pipe writes and checks
  * for error return.
  */
-void write_buf(fd, buf, cnt)
-    int       fd;
-    voidp     buf;
-    unsigned  cnt;
+void
+write_buf (fd, buf, cnt)
+     int fd;
+     voidp buf;
+     unsigned cnt;
 {
-    unsigned  n;
+  unsigned n;
 
-    while ((n = write_buffer (fd, buf, cnt)) != cnt) {
-        if (n == (unsigned)(-1)) {
-            write_error();
-        }
-        cnt -= n;
-        buf = (voidp)((char*)buf+n);
+  while ((n = write_buffer (fd, buf, cnt)) != cnt)
+    {
+      if (n == (unsigned) (-1))
+	{
+	  write_error ();
+	}
+      cnt -= n;
+      buf = (voidp) ((char *) buf + n);
     }
 }
 
 /* ========================================================================
  * Put string s in lower case, return s.
  */
-char *strlwr(s)
-    char *s;
+char *
+strlwr (s)
+     char *s;
 {
-    char *t;
-    for (t = s; *t; t++)
-      *t = tolow ((unsigned char) *t);
-    return s;
+  char *t;
+  for (t = s; *t; t++)
+    *t = tolow ((unsigned char) *t);
+  return s;
 }
 
 /* ========================================================================
@@ -352,17 +383,19 @@ char *strlwr(s)
  * case sensitive, force the base name to lower case.
  */
 char *
-gzip_base_name (char* filename)
+gzip_base_name (char *filename)
 {
-    filename = last_component (filename);
-    if (casemap('A') == 'a') strlwr(filename);
-    return filename;
+  filename = last_component (filename);
+  if (casemap ('A') == 'a')
+    strlwr (filename);
+  return filename;
 }
 
 /* ========================================================================
  * Unlink a file, working around the unlink readonly bug (if present).
  */
-int xunlink (filename)
+int
+xunlink (filename)
      char *filename;
 {
   int r = unlink (filename);
@@ -372,10 +405,10 @@ int xunlink (filename)
     {
       int e = errno;
       if (chmod (filename, S_IWUSR) != 0)
-        {
-          errno = e;
-          return -1;
-        }
+	{
+	  errno = e;
+	  return -1;
+	}
 
       r = unlink (filename);
     }
@@ -392,15 +425,21 @@ int xunlink (filename)
  * MAKE_LEGAL_NAME in tailor.h and providing the function in a target
  * dependent module.
  */
-void make_simple_name(name)
-    char *name;
+void
+make_simple_name (name)
+     char *name;
 {
-    char *p = strrchr(name, '.');
-    if (p == NULL) return;
-    if (p == name) p++;
-    do {
-        if (*--p == '.') *p = '_';
-    } while (p != name);
+  char *p = strrchr (name, '.');
+  if (p == NULL)
+    return;
+  if (p == name)
+    p++;
+  do
+    {
+      if (*--p == '.')
+	*p = '_';
+    }
+  while (p != name);
 }
 
 /* Convert the value of the environment variable ENVVAR_NAME
@@ -414,53 +453,59 @@ void make_simple_name(name)
 
 #define SEPARATOR	" \t"	/* separators in env variable */
 
-char *add_envopt(
-    int *argcp,          /* pointer to argc */
-    char ***argvp,       /* pointer to argv */
-    char const *envvar_name) /* name of environment variable */
+char *
+add_envopt (int *argcp,		/* pointer to argc */
+	    char ***argvp,	/* pointer to argv */
+	    char const *envvar_name)	/* name of environment variable */
 {
-    char *p;             /* running pointer through env variable */
-    char **oargv;        /* runs through old argv array */
-    char **nargv;        /* runs through new argv array */
-    int  nargc = 0;      /* number of arguments in env variable */
-    char *env_val;
+  char *p;			/* running pointer through env variable */
+  char **oargv;			/* runs through old argv array */
+  char **nargv;			/* runs through new argv array */
+  int nargc = 0;		/* number of arguments in env variable */
+  char *env_val;
 
-    env_val = getenv(envvar_name);
-    if (env_val == NULL) return NULL;
+  env_val = getenv (envvar_name);
+  if (env_val == NULL)
+    return NULL;
 
-    env_val = xstrdup (env_val);
+  env_val = xstrdup (env_val);
 
-    for (p = env_val; *p; nargc++ ) {        /* move through env_val */
-        p += strspn(p, SEPARATOR);	     /* skip leading separators */
-        if (*p == '\0') break;
+  for (p = env_val; *p; nargc++)
+    {				/* move through env_val */
+      p += strspn (p, SEPARATOR);	/* skip leading separators */
+      if (*p == '\0')
+	break;
 
-        p += strcspn(p, SEPARATOR);	     /* find end of word */
-        if (*p) *p++ = '\0';		     /* mark it */
+      p += strcspn (p, SEPARATOR);	/* find end of word */
+      if (*p)
+	*p++ = '\0';		/* mark it */
     }
-    if (nargc == 0) {
-        free(env_val);
-        return NULL;
+  if (nargc == 0)
+    {
+      free (env_val);
+      return NULL;
     }
-    *argcp = nargc + 1;
-    /* Allocate the new argv array, with an extra element just in case
-     * the original arg list did not end with a NULL.
-     */
-    nargv = xcalloc (*argcp + 1, sizeof (char *));
-    oargv  = *argvp;
-    *argvp = nargv;
+  *argcp = nargc + 1;
+  /* Allocate the new argv array, with an extra element just in case
+   * the original arg list did not end with a NULL.
+   */
+  nargv = xcalloc (*argcp + 1, sizeof (char *));
+  oargv = *argvp;
+  *argvp = nargv;
 
-    /* Copy the program name first */
-    *nargv++ = *oargv;
+  /* Copy the program name first */
+  *nargv++ = *oargv;
 
-    /* Then copy the environment args */
-    for (p = env_val; nargc > 0; nargc--) {
-        p += strspn(p, SEPARATOR);	     /* skip separators */
-        *(nargv++) = p;			     /* store start */
-        while (*p++) ;			     /* skip over word */
+  /* Then copy the environment args */
+  for (p = env_val; nargc > 0; nargc--)
+    {
+      p += strspn (p, SEPARATOR);	/* skip separators */
+      *(nargv++) = p;		/* store start */
+      while (*p++);		/* skip over word */
     }
 
-    *nargv = NULL;
-    return env_val;
+  *nargv = NULL;
+  return env_val;
 }
 
 /* ========================================================================
@@ -469,8 +514,8 @@ char *add_envopt(
 void
 gzip_error (char const *m)
 {
-    fprintf (stderr, "\n%s: %s: %s\n", program_name, ifname, m);
-    abort_gzip();
+  fprintf (stderr, "\n%s: %s: %s\n", program_name, ifname, m);
+  abort_gzip ();
 }
 
 void
@@ -480,73 +525,85 @@ xalloc_die ()
   abort_gzip ();
 }
 
-void warning (char const *m)
+void
+warning (char const *m)
 {
-    WARN ((stderr, "%s: %s: warning: %s\n", program_name, ifname, m));
+  WARN ((stderr, "%s: %s: warning: %s\n", program_name, ifname, m));
 }
 
-void read_error()
+void
+read_error ()
 {
-    int e = errno;
-    fprintf (stderr, "\n%s: ", program_name);
-    if (e != 0) {
-        errno = e;
-        perror(ifname);
-    } else {
-        fprintf(stderr, "%s: unexpected end of file\n", ifname);
+  int e = errno;
+  fprintf (stderr, "\n%s: ", program_name);
+  if (e != 0)
+    {
+      errno = e;
+      perror (ifname);
     }
-    abort_gzip();
+  else
+    {
+      fprintf (stderr, "%s: unexpected end of file\n", ifname);
+    }
+  abort_gzip ();
 }
 
-void write_error()
+void
+write_error ()
 {
-    int e = errno;
-    fprintf (stderr, "\n%s: ", program_name);
-    errno = e;
-    perror(ofname);
-    abort_gzip();
+  int e = errno;
+  fprintf (stderr, "\n%s: ", program_name);
+  errno = e;
+  perror (ofname);
+  abort_gzip ();
 }
 
 /* ========================================================================
  * Display compression ratio on the given stream on 6 characters.
  */
-void display_ratio(num, den, file)
-    off_t num;
-    off_t den;
-    FILE *file;
+void
+display_ratio (num, den, file)
+     off_t num;
+     off_t den;
+     FILE *file;
 {
-    fprintf(file, "%5.1f%%", den == 0 ? 0 : 100.0 * num / den);
+  fprintf (file, "%5.1f%%", den == 0 ? 0 : 100.0 * num / den);
 }
 
 /* ========================================================================
  * Print an off_t.  There's no completely portable way to use printf,
  * so we do it ourselves.
  */
-void fprint_off(file, offset, width)
-    FILE *file;
-    off_t offset;
-    int width;
+void
+fprint_off (file, offset, width)
+     FILE *file;
+     off_t offset;
+     int width;
 {
-    char buf[CHAR_BIT * sizeof (off_t)];
-    char *p = buf + sizeof buf;
+  char buf[CHAR_BIT * sizeof (off_t)];
+  char *p = buf + sizeof buf;
 
-    /* Don't negate offset here; it might overflow.  */
-    if (offset < 0) {
-        do
-          *--p = '0' - offset % 10;
-        while ((offset /= 10) != 0);
+  /* Don't negate offset here; it might overflow.  */
+  if (offset < 0)
+    {
+      do
+	*--p = '0' - offset % 10;
+      while ((offset /= 10) != 0);
 
-        *--p = '-';
-    } else {
-        do
-          *--p = '0' + offset % 10;
-        while ((offset /= 10) != 0);
+      *--p = '-';
+    }
+  else
+    {
+      do
+	*--p = '0' + offset % 10;
+      while ((offset /= 10) != 0);
     }
 
-    width -= buf + sizeof buf - p;
-    while (0 < width--) {
-        putc (' ', file);
+  width -= buf + sizeof buf - p;
+  while (0 < width--)
+    {
+      putc (' ', file);
     }
-    for (;  p < buf + sizeof buf;  p++)
-        putc (*p, file);
+  for (; p < buf + sizeof buf; p++)
+    putc (*p, file);
 }

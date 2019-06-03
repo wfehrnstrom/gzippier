@@ -23,14 +23,14 @@
 #include <stdlib.h>
 
 #ifdef DFLTCC_USDT
-# include <sys/sdt.h>
+#include <sys/sdt.h>
 #endif
 
 #include "tailor.h"
 #include "gzip.h"
 
 #ifdef DYN_ALLOC
-# error "DYN_ALLOC is not supported by DFLTCC"
+#error "DYN_ALLOC is not supported by DFLTCC"
 #endif
 
 /* ===========================================================================
@@ -39,11 +39,11 @@
 
 typedef enum
 {
- DFLTCC_CC_OK = 0,
- DFLTCC_CC_OP1_TOO_SHORT = 1,
- DFLTCC_CC_OP2_TOO_SHORT = 2,
- DFLTCC_CC_OP2_CORRUPT = 2,
- DFLTCC_CC_AGAIN = 3,
+  DFLTCC_CC_OK = 0,
+  DFLTCC_CC_OP1_TOO_SHORT = 1,
+  DFLTCC_CC_OP2_TOO_SHORT = 2,
+  DFLTCC_CC_OP2_CORRUPT = 2,
+  DFLTCC_CC_AGAIN = 3,
 } dfltcc_cc;
 
 #define DFLTCC_QAF 0
@@ -60,16 +60,16 @@ typedef enum
 #define HTT_DYNAMIC 1
 
 #ifndef DFLTCC_BLOCK_SIZE
-# define DFLTCC_BLOCK_SIZE 1048576
+#define DFLTCC_BLOCK_SIZE 1048576
 #endif
 #ifndef DFLTCC_FIRST_FHT_BLOCK_SIZE
-# define DFLTCC_FIRST_FHT_BLOCK_SIZE 4096
+#define DFLTCC_FIRST_FHT_BLOCK_SIZE 4096
 #endif
 #ifndef DFLTCC_LEVEL_MASK
-# define DFLTCC_LEVEL_MASK 0x2
+#define DFLTCC_LEVEL_MASK 0x2
 #endif
 #ifndef DFLTCC_RIBM
-# define DFLTCC_RIBM 0
+#define DFLTCC_RIBM 0
 #endif
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
@@ -90,44 +90,44 @@ union aligned_dfltcc_qaf_param
 
 struct dfltcc_param_v0
 {
-  unsigned short pbvn;               /* Parameter-Block-Version Number */
-  unsigned char mvn;                 /* Model-Version Number */
-  unsigned char ribm;                /* Reserved for IBM use */
-  unsigned reserved32 : 31;
-  unsigned cf : 1;                   /* Continuation Flag */
+  unsigned short pbvn;		/* Parameter-Block-Version Number */
+  unsigned char mvn;		/* Model-Version Number */
+  unsigned char ribm;		/* Reserved for IBM use */
+  unsigned reserved32:31;
+  unsigned cf:1;		/* Continuation Flag */
   unsigned char reserved64[8];
-  unsigned nt : 1;                   /* New Task */
-  unsigned reserved129 : 1;
-  unsigned cvt : 1;                  /* Check Value Type */
-  unsigned reserved131 : 1;
-  unsigned htt : 1;                  /* Huffman-Table Type */
-  unsigned bcf : 1;                  /* Block-Continuation Flag */
-  unsigned bcc : 1;                  /* Block Closing Control */
-  unsigned bhf : 1;                  /* Block Header Final */
-  unsigned reserved136 : 1;
-  unsigned reserved137 : 1;
-  unsigned dhtgc : 1;                /* DHT Generation Control */
-  unsigned reserved139 : 5;
-  unsigned reserved144 : 5;
-  unsigned sbb : 3;                  /* Sub-Byte Boundary */
-  unsigned char oesc;                /* Operation-Ending-Supplemental Code */
-  unsigned reserved160 : 12;
-  unsigned ifs : 4;                  /* Incomplete-Function Status */
-  unsigned short ifl;                /* Incomplete-Function Length */
+  unsigned nt:1;		/* New Task */
+  unsigned reserved129:1;
+  unsigned cvt:1;		/* Check Value Type */
+  unsigned reserved131:1;
+  unsigned htt:1;		/* Huffman-Table Type */
+  unsigned bcf:1;		/* Block-Continuation Flag */
+  unsigned bcc:1;		/* Block Closing Control */
+  unsigned bhf:1;		/* Block Header Final */
+  unsigned reserved136:1;
+  unsigned reserved137:1;
+  unsigned dhtgc:1;		/* DHT Generation Control */
+  unsigned reserved139:5;
+  unsigned reserved144:5;
+  unsigned sbb:3;		/* Sub-Byte Boundary */
+  unsigned char oesc;		/* Operation-Ending-Supplemental Code */
+  unsigned reserved160:12;
+  unsigned ifs:4;		/* Incomplete-Function Status */
+  unsigned short ifl;		/* Incomplete-Function Length */
   unsigned char reserved192[8];
   unsigned char reserved256[8];
   unsigned char reserved320[4];
-  unsigned short hl;                 /* History Length */
-  unsigned reserved368 : 1;
-  unsigned short ho : 15;            /* History Offset */
-  unsigned int cv;                   /* Check Value */
-  unsigned eobs : 15;                /* End-of-block Symbol */
-  unsigned reserved431 : 1;
-  unsigned char eobl : 4;            /* End-of-block Length */
-  unsigned reserved436 : 12;
-  unsigned reserved448 : 4;
-  unsigned short cdhtl : 12;         /* Compressed-Dynamic-Huffman Table
-                                        Length */
+  unsigned short hl;		/* History Length */
+  unsigned reserved368:1;
+  unsigned short ho:15;		/* History Offset */
+  unsigned int cv;		/* Check Value */
+  unsigned eobs:15;		/* End-of-block Symbol */
+  unsigned reserved431:1;
+  unsigned char eobl:4;		/* End-of-block Length */
+  unsigned reserved436:12;
+  unsigned reserved448:4;
+  unsigned short cdhtl:12;	/* Compressed-Dynamic-Huffman Table
+				   Length */
   unsigned char reserved464[6];
   unsigned char cdht[288];
   unsigned char reserved[32];
@@ -156,16 +156,13 @@ is_dfltcc_enabled (void)
     return 0;
 
   register int r0 __asm__ ("r0") = sizeof facilities / 8;
-  __asm__ ("stfle %[facilities]\n"
-           : [facilities] "=Q"(facilities) : [r0] "r"(r0) : "cc", "memory");
+__asm__ ("stfle %[facilities]\n": [facilities] "=Q" (facilities): [r0] "r" (r0):"cc", "memory");
   return is_bit_set (facilities, DFLTCC_FACILITY);
 }
 
 static dfltcc_cc
 dfltcc (int fn, void *param,
-        uch **op1, size_t *len1,
-        uch const **op2, size_t *len2,
-        void *hist)
+	uch ** op1, size_t * len1, uch const **op2, size_t * len2, void *hist)
 {
   uch *t2 = op1 ? *op1 : NULL;
   size_t t3 = len1 ? *len1 : 0;
@@ -181,28 +178,26 @@ dfltcc (int fn, void *param,
 
   __asm__ volatile (
 #ifdef DFLTCC_USDT
-                    STAP_PROBE_ASM (zlib, dfltcc_entry,
-                                    STAP_PROBE_ASM_TEMPLATE (5))
+		     STAP_PROBE_ASM (zlib, dfltcc_entry,
+				     STAP_PROBE_ASM_TEMPLATE (5))
 #endif
-                    ".insn rrf,0xb9390000,%[r2],%[r4],%[hist],0\n"
+		     ".insn rrf,0xb9390000,%[r2],%[r4],%[hist],0\n"
 #ifdef DFLTCC_USDT
-                    STAP_PROBE_ASM (zlib, dfltcc_exit,
-                                    STAP_PROBE_ASM_TEMPLATE (5))
+		     STAP_PROBE_ASM (zlib, dfltcc_exit,
+				     STAP_PROBE_ASM_TEMPLATE (5))
 #endif
-                    "ipm %[cc]\n"
-                    : [r2] "+r" (r2)
-                      , [r3] "+r" (r3)
-                      , [r4] "+r" (r4)
-                      , [r5] "+r" (r5)
-                      , [cc] "=r" (cc)
-                    : [r0] "r" (r0)
-                      , [r1] "r" (r1)
-                      , [hist] "r" (hist)
+		     "ipm %[cc]\n":[r2] "+r" (r2),[r3] "+r" (r3),
+		     [r4] "+r" (r4),[r5] "+r" (r5),
+		     [cc] "=r" (cc):[r0] "r" (r0),[r1] "r" (r1),
+		     [hist] "r" (hist)
 #ifdef DFLTCC_USDT
-                      , STAP_PROBE_ASM_OPERANDS (5, r2, r3, r4, r5, hist)
+		     , STAP_PROBE_ASM_OPERANDS (5, r2, r3, r4, r5, hist)
 #endif
-                    : "cc", "memory");
-  t2 = r2; t3 = r3; t4 = r4; t5 = r5;
+		     :"cc", "memory");
+  t2 = r2;
+  t3 = r3;
+  t4 = r4;
+  t5 = r5;
 
   if (op1)
     *op1 = t2;
@@ -240,9 +235,9 @@ dfltcc_cmpr_xpnd (struct dfltcc_param_v0 *param, int fn)
   const uch *next_in = inbuf + inptr;
   size_t avail_in = insize - inptr;
   dfltcc_cc cc = dfltcc (fn | HBT_CIRCULAR, param,
-                         &next_out, &avail_out,
-                         &next_in, &avail_in,
-                         window);
+			 &next_out, &avail_out,
+			 &next_in, &avail_in,
+			 window);
   off_t consumed_in = next_in - (inbuf + inptr);
   inptr += consumed_in;
   total_in += consumed_in;
@@ -269,7 +264,7 @@ bi_close_block (struct dfltcc_param_v0 *param)
   bi_valid = param->sbb;
   bi_buf = bi_valid == 0 ? 0 : outbuf[outcnt] & ((1 << bi_valid) - 1);
   send_bits (bi_reverse (param->eobs >> (15 - param->eobl), param->eobl),
-             param->eobl);
+	     param->eobl);
   param->bcf = 0;
 }
 
@@ -291,7 +286,7 @@ close_stream (struct dfltcc_param_v0 *param)
 {
   if (param->bcf)
     bi_close_block (param);
-  send_bits (1, 3); /* BFINAL=1, BTYPE=00 */
+  send_bits (1, 3);		/* BFINAL=1, BTYPE=00 */
   bi_windup ();
   put_short (0x0000);
   put_short (0xFFFF);
@@ -334,22 +329,22 @@ dfltcc_deflate (int pack_level)
     {
       /* Flush the output data.  */
       if (outcnt > OUTBUFSIZE - 8)
-        flush_outbuf ();
+	flush_outbuf ();
 
       /* Close the block.  */
       if (param->bcf && total_in == block_threshold && !param->cf)
-        {
-          close_block (param);
-          block_threshold += block_size;
-        }
+	{
+	  close_block (param);
+	  block_threshold += block_size;
+	}
 
       /* Read the input data.  */
       if (inptr == insize)
-        {
-          if (fill_inbuf (true, -1) == EOF && !param->cf)
-            break;
-          inptr = 0;
-        }
+	{
+	  if (fill_inbuf (true, -1) == EOF && !param->cf)
+	    break;
+	  inptr = 0;
+	}
 
       /* Temporarily mask some input data.  */
       int extra = MAX (0, total_in + (insize - inptr) - block_threshold);
@@ -357,14 +352,15 @@ dfltcc_deflate (int pack_level)
 
       /* Start a new block.  */
       if (!param->bcf)
-        {
-          if (total_in == 0 && block_threshold > 0)
-            param->htt = HTT_FIXED;
-          else {
-            param->htt = HTT_DYNAMIC;
-            dfltcc_gdht (param);
-          }
-        }
+	{
+	  if (total_in == 0 && block_threshold > 0)
+	    param->htt = HTT_FIXED;
+	  else
+	    {
+	      param->htt = HTT_DYNAMIC;
+	      dfltcc_gdht (param);
+	    }
+	}
 
       /* Compress inbuf into outbuf.  */
       dfltcc_cmpr_xpnd (param, DFLTCC_CMPR);
@@ -401,36 +397,36 @@ dfltcc_inflate (void)
     {
       /* Perform I/O.  */
       if (outcnt == OUTBUFSIZE)
-        flush_outbuf ();
+	flush_outbuf ();
       if (inptr == insize)
-        {
-          if (fill_inbuf (true, -1) == EOF)
-            {
-              /* Premature EOF.  */
-              return 2;
-            }
-          inptr = 0;
-        }
+	{
+	  if (fill_inbuf (true, -1) == EOF)
+	    {
+	      /* Premature EOF.  */
+	      return 2;
+	    }
+	  inptr = 0;
+	}
 
-        /* Decompress inbuf into outbuf.  */
-        dfltcc_cc cc = dfltcc_cmpr_xpnd (param, DFLTCC_XPND);
-        if (cc == DFLTCC_CC_OK)
-          {
-            /* The entire deflate stream has been successfully decompressed.  */
-            break;
-          }
-        if (cc == DFLTCC_CC_OP2_CORRUPT && param->oesc != 0)
-          {
-            /* The deflate stream is corrupted.  */
-            return 2;
-          }
-        /* There must be more data to decompress.  */
+      /* Decompress inbuf into outbuf.  */
+      dfltcc_cc cc = dfltcc_cmpr_xpnd (param, DFLTCC_XPND);
+      if (cc == DFLTCC_CC_OK)
+	{
+	  /* The entire deflate stream has been successfully decompressed.  */
+	  break;
+	}
+      if (cc == DFLTCC_CC_OP2_CORRUPT && param->oesc != 0)
+	{
+	  /* The deflate stream is corrupted.  */
+	  return 2;
+	}
+      /* There must be more data to decompress.  */
     }
 
   if (param->sbb != 0)
     {
       /* The deflate stream has ended in the middle of a byte.  Go to
-        the next byte boundary, so that unzip can read CRC and length.  */
+         the next byte boundary, so that unzip can read CRC and length.  */
       inptr++;
     }
 

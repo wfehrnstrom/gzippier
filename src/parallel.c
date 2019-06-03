@@ -386,11 +386,19 @@ static unsigned long crc32z(unsigned long crc,
 
 static noreturn void *write_thread(void* nothing) {
   unsigned long check = crc32z(0L, Z_NULL, 0);
-  
+
   // write the header
-  struct gzip_header header = create_header(ifname, 0, pack_level);
-  writen(ofd, (unsigned char *)&header, sizeof(header) - 2);
-  writen(ofd, (unsigned char *)ifname, strlen(ifname) + 1);
+  struct gzip_header header;
+  if (ifd == STDIN_FILENO) {
+    header = create_header(NULL, 0, pack_level);
+    writen(ofd, (unsigned char *)&header, sizeof(header) - 2);
+  } else {
+    header = create_header(ifname, 0, pack_level);
+    writen(ofd, (unsigned char *)&header, sizeof(header) - 2);
+    writen(ofd, (unsigned char *)ifname, strlen(ifname) + 1);
+  }
+
+  
   size_t ulen = 0;
   
   long seq = 0;
@@ -604,6 +612,7 @@ void parallel_zip(int pack_lev) {
   if (last_job->in->len >= DICTIONARY_SIZE) {
     dict = last_job->in;
   }
+
   // file wasn't empty
   while(last_read != 0) {
     // get a job

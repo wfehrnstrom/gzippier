@@ -25,7 +25,6 @@
 
 static struct buffer_pool in_pool;
 static struct buffer_pool out_pool;
-static struct buffer_pool dict_pool;
 static struct job_list compress_jobs;
 static struct job_list write_jobs;
 static struct job_list free_jobs;
@@ -245,12 +244,6 @@ static void init_pools(void) {
   out_pool.head = NULL;
   out_pool.buffer_size = OUT_BUF_SIZE;
   out_pool.num_buffers = -1;
-
-  // dictionary pool
-  init_lock(&dict_pool.lock);
-  dict_pool.head = NULL;
-  dict_pool.buffer_size = DICTIONARY_SIZE;
-  dict_pool.num_buffers = -1;
 }
 
 static void init_jobs(void) {

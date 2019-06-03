@@ -60,7 +60,7 @@ do
   if touch -t $time in; then
     ls_l=$(ls -l in)
     case $ls_l in
-      *"$date"*) gzip in || fail=1 | echo $fail;;
+      *"$date"*) gzip in || fail=1;;
     esac
   fi
   rm -f in.gz in

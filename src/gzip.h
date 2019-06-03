@@ -205,6 +205,7 @@ extern int test;           /* check .z file integrity */
 extern int to_stdout;      /* output to stdout (-c) */
 extern int save_orig_name; /* set if original name must be saved */
 extern int no_name;        /* original name should not be restored */
+extern int pkzip;          /* global variable for pkzip */ 
 
 #define get_byte()  (inptr < insize ? inbuf[inptr++] : fill_inbuf(false, CHUNK))
 #define try_byte()  (inptr < insize ? inbuf[inptr++] : fill_inbuf(true, CHUNK))
@@ -324,6 +325,7 @@ extern void fprint_off    (FILE *, off_t, int);
 
         /* in inflate.c */
 extern int inflateGZIP (void);
+extern int inflatePKZIP (void);
 
         /* in dfltcc.c */
 #ifdef IBM_Z_DFLTCC

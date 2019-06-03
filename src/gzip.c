@@ -179,7 +179,7 @@ static int ascii = 0;        /* convert end-of-lines to local OS conventions */
 static int decompress = 0;   /* decompress (-d) */
 static int force = 0;        /* don't ask questions, compress links (-f) */
 static int keep = 0;         /* keep (don't delete) input files */
-static int no_name = -1;     /* don't save or restore the original file name */
+       int no_name = -1;     /* don't save or restore the original file name */
 static int no_time = -1;     /* don't save or restore the original file time */
 static int recursive = 0;    /* recurse through directories (-r) */
 static int list = 0;         /* list the file contents (-l) */
@@ -1726,8 +1726,13 @@ get_method (int in)
         /* check_zipfile may get ofname from the local header */
         last_member = 1;
 
+    } else if (force && to_stdout && !list) { /* pass input unchanged */
+        method = STORED;
+        work = copy;
     }
+
     if (method >= 0) return method;
+
     if (part_nb == 1) {
         fprintf (stderr, "\n%s: %s: not in gzip format\n",
                  program_name, ifname);

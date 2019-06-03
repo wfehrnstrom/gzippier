@@ -15,7 +15,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 TESTS =					\
-  gzip-env				\
   helin-segv				\
   help-version				\
   hufts					\
@@ -28,8 +27,6 @@ TESTS =					\
   stdin					\
   timestamp				\
   trailing-nul				\
-  unpack-invalid			\
-  unpack-valid				\
   upper-suffix				\
   z-suffix				\
   zdiff					\

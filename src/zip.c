@@ -134,6 +134,14 @@ zip (int in, int out)
 
   method = DEFLATED;
 
+  if(!(0 < time_stamp.tv_sec && time_stamp.tv_sec <= 0xffffffff) && !no_name
+    && time_stamp.tv_nsec >= 0)
+    {
+      /* It's intended that timestamp 0 generates this warning,
+         since gzip format reserves 0 for something else.  */
+      warning ("file timestamp out of range for gzip format");
+    }
+
 #ifdef IBM_Z_DFLTCC
   dfltcc_deflate (level);
 #else

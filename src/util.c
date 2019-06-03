@@ -104,22 +104,46 @@ static ulg crc = 0xffffffffL;
  * IN assertion: insize bytes have already been read in inbuf and inptr bytes
  * already processed or copied.
  */
-int copy(in, out)
-    int in, out;   /* input and output file descriptors */
+int copy(int source, int dest) /* input and output file descriptors */
 {
-    int got;
+    unsigned char in[CHUNK];
+    bool read_prev = false;
+    int bytes_to_read = CHUNK;
+    const int COPY_ERROR = -1;
 
-    errno = 0;
-    while (insize > inptr) {
-        write_buf(out, (char*)inbuf + inptr, insize - inptr);
-        bytes_out += insize - inptr;
-        got = read_buffer (in, (char *) inbuf, INBUFSIZE);
-        if (got == -1)
-            read_error();
-        bytes_in += got;
-        insize = (unsigned)got;
-        inptr = 0;
-    }
+    memzero(in, CHUNK);
+
+    if (insize > 0)
+      {
+        memmove ((char *) in, (char *) inbuf, insize);
+        bytes_to_read -= insize;
+        read_prev = true;
+      }
+
+    int read_in;
+    int bytes_written;
+    do {
+        if (read_prev) {
+            read_in = read(source, in + insize, bytes_to_read);
+            bytes_to_read = CHUNK;
+        } else {
+            read_in = read(source, in, bytes_to_read);
+        }
+
+        if (read_in < 0)
+          {
+            fprintf (stderr, "read failed: %s\n", strerror(errno));
+            return COPY_ERROR;
+          }
+
+        read_in += insize;
+        bytes_written = write(dest, in, read_in);
+        if (bytes_written != read_in) {
+            fprintf (stderr, "write failed: %s\n", strerror(errno));
+            return COPY_ERROR;
+        }
+    } while (read_in == bytes_to_read);
+
     return OK;
 }
 

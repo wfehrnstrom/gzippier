@@ -2,7 +2,7 @@
 
 nbytes=10000000  # default file size
 candidates=(../src/gzip bzip2 lzma) # do not put ./old_gzip here
-sizes=(100 1KB 100KB 1MB)
+sizes=(100 1024 102400 1048576) #100B 1KB 100KB 1MB
 kernel_flag=0
 size_flag=0
 file=input
@@ -59,6 +59,25 @@ do
     fi
 done
 progs+=(./old_gzip)
+progs+=("../src/gzip -j 4")
+
+
+size_conversion(){
+	converted_size=$1
+	if [ $(( $converted_size % 1048576 )) -eq 0 ] #check if in MB
+	then
+		converted_size=$((($converted_size)/1048576))
+		converted_size+=MB
+	elif [ $(( $converted_size % 1024 )) -eq 0 ]
+	then
+		converted_size=$((($converted_size)/1024))
+		converted_size+=KB
+	else
+		converted_size+=B
+	fi
+
+	printf "$converted_size\n"
+}
 
 generate_random(){
 	generate_size=0
@@ -72,7 +91,8 @@ generate_random(){
 		generate_size=$1
 	fi
 
-	printf "File size: $generate_size\n"
+	printf "File size: "
+	size_conversion $generate_size
 	head -c $generate_size /dev/urandom > input
 
 }

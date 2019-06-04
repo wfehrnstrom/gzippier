@@ -22,7 +22,7 @@ SRC = src
 ALL_RECURSIVE_TARGETS = $(SRC)
 BUILT_SOURCES =
 
-SUBDIRS = lib doc $(SRC) . tests
+SUBDIRS = lib doc $(SRC) . tests benchmarks
 AM_CPPFLAGS = -I$(top_srcdir)/lib
 AM_CFLAGS = $(WARN_CFLAGS) $(WERROR_CFLAGS)
 

@@ -25,6 +25,7 @@ AC_CONFIG_SRCDIR([src/gzip.c])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([lib/config.h:lib/config.hin])
+AM_EXTRA_RECURSIVE_TARGETS([benchmarks])
 AM_INIT_AUTOMAKE([1.11 subdir-objects dist-xz dist-zip
                   color-tests parallel-tests])
 AM_SILENT_RULES([yes]) # make --enable-silent-rules the default.
@@ -277,5 +278,6 @@ AC_DEFINE_UNQUOTED([RETSIGTYPE],[$ac_cv_type_signal],[Define as the return type 
 AC_TYPE_SIZE_T
 AC_TYPE_OFF_T
 
-AC_CONFIG_FILES([Makefile doc/Makefile lib/Makefile tests/Makefile src/Makefile])
+AC_CONFIG_FILES([Makefile doc/Makefile lib/Makefile tests/Makefile src/Makefile
+  benchmarks/Makefile])
 AC_OUTPUT

@@ -26,7 +26,8 @@ TESTS =					\
   reproducible				\
   stdin					\
   timestamp				\
-  trailing-nul				\
+  # trailing-nul		At present not run because gzip no longer warns about
+	#									Trailing null bytes as of zlib integration.
   upper-suffix				\
   z-suffix				\
   zdiff					\

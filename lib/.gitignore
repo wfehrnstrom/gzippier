@@ -76,6 +76,7 @@
 /ftello.c
 /getcwd-lgpl.c
 /getdtablesize.c
+/getopt-cdefs.h
 /getopt-cdefs.in.h
 /getopt-core.h
 /getopt-ext.h

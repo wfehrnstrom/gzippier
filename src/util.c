@@ -104,22 +104,46 @@ static ulg crc = 0xffffffffL;
  * IN assertion: insize bytes have already been read in inbuf and inptr bytes
  * already processed or copied.
  */
-int copy(in, out)
-    int in, out;   /* input and output file descriptors */
+int copy(int source, int dest) /* input and output file descriptors */
 {
-    int got;
+    unsigned char in[CHUNK];
+    bool read_prev = false;
+    int bytes_to_read = CHUNK;
+    const int COPY_ERROR = -1;
 
-    errno = 0;
-    while (insize > inptr) {
-        write_buf(out, (char*)inbuf + inptr, insize - inptr);
-        bytes_out += insize - inptr;
-        got = read_buffer (in, (char *) inbuf, INBUFSIZE);
-        if (got == -1)
-            read_error();
-        bytes_in += got;
-        insize = (unsigned)got;
-        inptr = 0;
-    }
+    memzero(in, CHUNK);
+
+    if (insize > 0)
+      {
+        memmove ((char *) in, (char *) inbuf, insize);
+        bytes_to_read -= insize;
+        read_prev = true;
+      }
+
+    int read_in;
+    int bytes_written;
+    do {
+        if (read_prev) {
+            read_in = read(source, in + insize, bytes_to_read);
+            bytes_to_read = CHUNK;
+        } else {
+            read_in = read(source, in, bytes_to_read);
+        }
+
+        if (read_in < 0)
+          {
+            fprintf (stderr, "read failed: %s\n", strerror(errno));
+            return COPY_ERROR;
+          }
+
+        read_in += insize;
+        bytes_written = write(dest, in, read_in);
+        if (bytes_written != read_in) {
+            fprintf (stderr, "write failed: %s\n", strerror(errno));
+            return COPY_ERROR;
+        }
+    } while (read_in == bytes_to_read);
+
     return OK;
 }
 
@@ -128,9 +152,10 @@ int copy(in, out)
  * pointer, then initialize the crc shift register contents instead.
  * Return the current crc in either case.
  */
-ulg updcrc(s, n)
-    const uch *s;           /* pointer to bytes to pump through */
-    unsigned n;             /* number of bytes in s[] */
+ /* s: pointer to bytes to pump through */
+ /* n: number of bytes in s[] */
+ulg
+updcrc(const uch *s, unsigned n)
 {
     register ulg c;         /* temporary variable */
 
@@ -172,23 +197,36 @@ void clear_bufs()
 
 /* ===========================================================================
  * Fill the input buffer. This is called only when the buffer is empty.
+ * max_fill: if -1, disregard. Otherwise, this is the maximum number of bytes
+ *           to read into the buffer
+ * eof_ok: set if EOF acceptable as a result
  */
-int fill_inbuf(eof_ok)
-    int eof_ok;          /* set if EOF acceptable as a result */
+int
+fill_inbuf (int eof_ok, int max_fill)
 {
     int len;
+    int read_in;
+    if(max_fill > (INBUFSIZE-insize) || max_fill < 0){
+      read_in = INBUFSIZE-insize;
+    }
+    else{
+      read_in = max_fill;
+    }
 
     /* Read as much as possible */
     insize = 0;
     do {
-        len = read_buffer (ifd, (char *) inbuf + insize, INBUFSIZE- insize);
-        if (len == 0) break;
+        len = read_buffer (ifd, (char *) inbuf + insize, read_in);
+        if (len == 0) {
+          break;
+        }
         if (len == -1) {
           read_error();
           break;
         }
         insize += len;
-    } while (insize < INBUFSIZE);
+        read_in -= len;
+    } while (insize < INBUFSIZE && insize < read_in);
 
     if (insize == 0) {
         if (eof_ok) return EOF;
@@ -197,6 +235,9 @@ int fill_inbuf(eof_ok)
         read_error();
     }
     bytes_in += (off_t)insize;
+    /* since we are reading in one byte of the new inbuf, we set the inptr
+     * to the next byte
+     */
     inptr = 1;
     return inbuf[0];
 }
@@ -313,8 +354,7 @@ char *strlwr(s)
  * case sensitive, force the base name to lower case.
  */
 char *
-gzip_base_name (filename)
-    char *filename;
+gzip_base_name (char* filename)
 {
     filename = last_component (filename);
     if (casemap('A') == 'a') strlwr(filename);

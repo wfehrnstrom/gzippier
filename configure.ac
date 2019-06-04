@@ -19,13 +19,21 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 # 02111-1307, USA.
 AC_PREREQ([2.63])
-AC_INIT([gzip],[m4_esyscmd(build-aux/git-version-gen .tarball-version)],[bug-gzip@gnu.org])
+AC_INIT([gzip],
+        m4_esyscmd([build-aux/git-version-gen .tarball-version]),
+        [bug-gzip@gnu.org])
 
 AC_CONFIG_SRCDIR([src/gzip.c])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([lib/config.h:lib/config.hin])
 AM_EXTRA_RECURSIVE_TARGETS([benchmarks])
+AM_CONDITIONAL([ZLIB_MAKEFILE], [test -f "$srcdir/lib/zlib/Makefile"])
+if test -f "$srcdir/lib/zlib/configure"; then
+   echo "Configuring zlib..."
+   cd "$srcdir/lib/zlib" && ./configure | sed 's/^/  /' && cd "../.."
+   echo "Done."
+fi
 AM_INIT_AUTOMAKE([1.11 subdir-objects dist-xz dist-zip
                   color-tests parallel-tests])
 AM_SILENT_RULES([yes]) # make --enable-silent-rules the default.

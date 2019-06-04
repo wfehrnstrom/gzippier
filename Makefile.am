@@ -26,6 +26,10 @@ SUBDIRS = lib doc $(SRC) . tests benchmarks
 AM_CPPFLAGS = -I$(top_srcdir)/lib
 AM_CFLAGS = $(WARN_CFLAGS) $(WERROR_CFLAGS)
 
+if ZLIB_MAKEFILE
+  ZLIB_SRC = lib/zlib
+endif
+
 DISTCLEANFILES = $(SRC)/version.c $(SRC)/version.h
 
 man_MANS = gunzip.1 gzexe.1 gzip.1 \

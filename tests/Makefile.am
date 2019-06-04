@@ -14,8 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+# Removed trailing-nul: at present not run because gzip no longer warns about
+# Trailing null bytes as of zlib integration.
+
 TESTS =					\
-  gzip-env				\
   helin-segv				\
   help-version				\
   hufts					\
@@ -27,9 +29,6 @@ TESTS =					\
   reproducible				\
   stdin					\
   timestamp				\
-  trailing-nul				\
-  unpack-invalid			\
-  unpack-valid				\
   upper-suffix				\
   z-suffix				\
   zdiff					\

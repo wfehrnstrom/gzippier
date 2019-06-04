@@ -14,6 +14,7 @@
 /INSTALL
 /README-release
 /aclocal.m4
+/benchmark/old_gzip
 /build-aux
 /config.status
 /configure
@@ -27,7 +28,6 @@
 /lib/warn-on-use.h
 /libver.a
 /src/libver.a
-/testing/old_gzip
 /maint.mk
 /maint.mk
 /version.[ch]

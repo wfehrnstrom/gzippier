@@ -1,7 +1,7 @@
 // TODO: error checking on all mallocs
 // TODO: error checking on reads and writes
 // TODO: add error check to zlib functions
-// TODO: clean up the in buffer of the last job
+// TODO: fix race condition
 
 #include <stdint.h>
 #include <pthread.h>
@@ -25,6 +25,12 @@ static struct job_list compress_jobs;
 static struct job_list write_jobs;
 static struct job_list free_jobs;
 static int pack_level;
+
+static void t(char const *str) {
+  pthread_t self;
+  self = pthread_self();
+  fprintf(stderr, "THREAD %lu: %s\n", self, str);
+}
 
 struct gzip_header {
   uint8_t magic1;
@@ -456,7 +462,7 @@ static noreturn void *compress_thread(void* nothing) {
   stream.zalloc = Z_NULL;
   stream.opaque = Z_NULL;
   deflateInit2(&stream, pack_level, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
-  
+  t("1");
   for (;;) {
     // get a job from the compress list
     lock(&compress_jobs.lock);
@@ -469,7 +475,7 @@ static noreturn void *compress_thread(void* nothing) {
       pthread_exit(NULL);
     }
     broadcast(&compress_jobs.lock);
-    
+    t("2");
     // get a compress job
     job = compress_jobs.head;
     if (compress_jobs.head == compress_jobs.tail) {
@@ -477,15 +483,17 @@ static noreturn void *compress_thread(void* nothing) {
     }
     compress_jobs.head = compress_jobs.head->next;
     unlock(&compress_jobs.lock);
-
+    t("3");
     len = job->in->len;
     // reset stream
     deflateReset(&stream);
-    
     // set the dictionary
     if (job->dict != NULL) {
+      t("!");
+      fprintf(stderr, "dict->data: %p, dict->len: %lu\n", job->dict->data, job->dict->len);
+      t("#");
       deflateSetDictionary(&stream, job->dict->data + (job->dict->len - DICTIONARY_SIZE), DICTIONARY_SIZE);
-      
+      t("a");
       // return the dictionary buffer if possible
       lock(&job->dict->lock);
       if (job->dict->lock.value == 0) {
@@ -494,15 +502,16 @@ static noreturn void *compress_thread(void* nothing) {
 	job->dict->lock.value--;
       }
       unlock(&job->dict->lock);
+      t("b");
     }
-    
+    t("4");
     // get an out buffer
     job->out = get_buffer(&out_pool);
-    
+    t("5");
     // set up stream struct
     stream.next_in = job->in->data;
     stream.avail_in = job->in->len;
-
+    t("6");
     // check if this is the last (empty) block
     
     size_t left = job->in->len;
@@ -511,13 +520,13 @@ static noreturn void *compress_thread(void* nothing) {
       deflate_buffer(&stream, job->out, Z_NO_FLUSH);
       left -= MAXP2;
     }
-    
+    t("7");
     stream.avail_in = (unsigned)left;
 
     if (job->more) {  
       // compress normally
       deflate_buffer(&stream, job->out, Z_BLOCK); 
-
+      t("8");
       int bits;
       deflatePending(&stream, Z_NULL, &bits);
       if (bits & 1) {
@@ -532,16 +541,18 @@ static noreturn void *compress_thread(void* nothing) {
     } else {
       // finish compression
       deflate_buffer(&stream, job->out, Z_FINISH);
+      t("9");
     }
-
+    t("10");
     // put job on the write list
     lock(&write_jobs.lock);
-    struct job *prev;
+    struct job *prev = NULL;
     struct job *cur = write_jobs.head;
     while (cur != NULL && cur->seq < job->seq) {
       prev = cur;
       cur = cur->next;
     }
+    t("11");
     if (write_jobs.head == NULL) {
       job->next = NULL;
       write_jobs.head = job;
@@ -554,7 +565,7 @@ static noreturn void *compress_thread(void* nothing) {
     }
     broadcast(&write_jobs.lock);
     unlock(&write_jobs.lock);
-    
+    t("12");
     // calculate check
     len = job->in->len;
     unsigned char *next = job->in->data;
@@ -569,7 +580,7 @@ static noreturn void *compress_thread(void* nothing) {
     job->check = check;
     // unlock check
     unlock(&job->check_done);
-
+    t("13");
     // return in buffer if you can
     lock(&job->in->lock);
     if (job->in->lock.value == 0) {
@@ -578,6 +589,7 @@ static noreturn void *compress_thread(void* nothing) {
       job->in->lock.value--;
     }
     unlock(&job->in->lock);
+    t("14");
   }
 
   deflateEnd(&stream);
@@ -633,9 +645,8 @@ void parallel_zip(int pack_lev) {
     }
     
     // put the previous job on the back of the compress list
-    if (last_job->more) {
-      // TODO
-      //last_job->in->lock.value--;
+    if (!last_job->more) {
+      last_job->in->lock.value = 0;
     }
     if (last_job != NULL) {
       lock(&compress_jobs.lock);
@@ -660,6 +671,8 @@ void parallel_zip(int pack_lev) {
     seq++;
   }
 
+  
+  
   // call the threads home
   pthread_join(write_thread_t, NULL);
   lock(&compress_jobs.lock);
@@ -669,4 +682,6 @@ void parallel_zip(int pack_lev) {
   for (int i = 0; i < threads_compressing; i++) {
     pthread_join(compression_threads_t[i], NULL);
   }
+  return_buffer(last_job->in);
+  return_job(last_job);
 }

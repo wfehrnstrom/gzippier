@@ -1,5 +1,6 @@
 #!/bin/sh
-# Before gzip-1.4, gzip -d would segfault on some inputs.
+# Before gzip-1.4, gzip -d would segfault on some inputs. Now, check that we
+# don't even process this data, because we don't support lzh, lzw
 
 # Copyright (C) 2010-2019 Free Software Foundation, Inc.
 
@@ -21,11 +22,14 @@
 
 # This test case was provided by Aki Helin.
 printf '\037\235\220\0\0\0\304' > helin.gz || framework_failure_
-printf '\0\0' > exp || framework_failure_
 
 fail=0
 
-gzip -dc helin.gz > out || fail=1
-compare exp out || fail=1
+gzip -dc helin.gz
+ret=$?
+if [ ret = 1 ]; then
+  fail=1
+fi
+rm -f helin.gz
 
 Exit $fail

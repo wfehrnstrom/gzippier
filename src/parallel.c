@@ -200,7 +200,7 @@ static inline size_t grow(size_t size) {
 static void grow_buffer(struct buffer *buffer) {
   unsigned char *tmp;
   size_t bigger = grow(buffer->size);
-  tmp = realloc(buffer->data, buffer->size);
+  tmp = realloc(buffer->data, bigger);
   if (tmp != NULL) {
     buffer->size = bigger;
     buffer->data = tmp;

@@ -27,13 +27,6 @@ static struct job_list write_jobs;
 static struct job_list free_jobs;
 static int pack_level;
 
-static void t(char const *str) {
-  str = str;
-  //pthread_t self;
-  //self = pthread_self();
-  //fprintf(stderr, "THREAD %lu: %s\n", self, str);
-}
-
 struct gzip_header {
   uint8_t magic1;
   uint8_t magic2;
@@ -44,13 +37,13 @@ struct gzip_header {
   uint8_t os;
 };
 
-static struct gzip_header create_header(char const *name, time_t time, int level) {
+static struct gzip_header create_header(char const *name, int level) {
   struct gzip_header header;
   header.magic1 = 31;
   header.magic2 = 139;
   header.deflate = 8;
   header.flags1 = (name != NULL) ? 8 : 0;
-  header.time = (uint32_t)time;
+  header.time = (uint32_t)time_stamp.tv_sec;
   header.flags2 = (level >= 9 ? 2 : level == 1 ? 4: 0);
   header.os = 3;
 
@@ -164,18 +157,6 @@ static struct buffer *get_buffer(struct buffer_pool *pool) {
     result = pool->head;
     pool->head = pool->head->next;
   }
-  if (pool == &in_pool) {
-    struct buffer *n = in_pool.head;
-    while (n != NULL && n != n->next) {
-      fprintf(stdout, "GET LIST: %p\n", n);
-      n = n->next;
-    }
-    fprintf(stdout, "GET LIST: %p\n", n);
-    fprintf(stdout, "============\n");
-
-    fprintf(stderr, "GETTING IN BUFFER: %p, %p\n", result, result->next);
-    //fprintf(stdout, "GETTING BUFFER: %p\n", result);
-  }
 
   pool->num_buffers--;
   unlock(&pool->lock);
@@ -184,27 +165,13 @@ static struct buffer *get_buffer(struct buffer_pool *pool) {
 
 static void return_buffer(struct buffer *buffer) {
   struct buffer_pool *pool = buffer->pool;
-  //if (pool == &in_pool) { fprintf(stdout, "RETURNING BUFFER: %p\n", buffer); }
   buffer->len = 0;
+
   lock(&pool->lock);
-  t("LOCK");
   buffer->next = pool->head;
   pool->head = buffer;
   pool->num_buffers++;
-  if (pool->head != NULL && pool->head == pool->head->next) {
-    t("\n\n\n\n\n\n\n");
-  }
-  if (pool == &in_pool) {
-    struct buffer *n = in_pool.head;
-    while (n != NULL && n != n->next) {
-      fprintf(stdout, "RETURN LIST: %p\n", n);
-      n = n->next;
-    }
-    fprintf(stdout, "RETURN LIST: %p\n", n);
-    fprintf(stdout, "============\n");
-  }
   broadcast(&pool->lock);
-  t("UNLOCK");
   unlock(&pool->lock);
 }
 
@@ -233,7 +200,6 @@ static inline size_t grow(size_t size) {
 static void grow_buffer(struct buffer *buffer) {
   buffer->size = grow(buffer->size);
   buffer->data = realloc(buffer->data, buffer->size);
-  //fprintf(stdout, "buffer->data: %p, buffer->size: %lu\n", buffer->data, buffer->size);
 }
 
 // Jobs and helpers
@@ -257,10 +223,8 @@ struct job {
 
 static struct job *get_job(long seq) {
   struct job* result;
-  t("A");
   lock(&free_jobs.lock);
   if (free_jobs.head == NULL) {
-    t("B");
     unlock(&free_jobs.lock);
     // allocate a new job
     result = malloc(sizeof(struct job));
@@ -269,21 +233,16 @@ static struct job *get_job(long seq) {
     // grab one from the list
     result = free_jobs.head;
     free_jobs.head = free_jobs.head->next;
-    t("C");
     unlock(&free_jobs.lock);
   }
-  t("D");
   lock(&result->check_done);
   result->next = NULL;
   result->seq = seq;
-  t("E");
   result->in = get_buffer(&in_pool);
-  t("F");
   return result;
 }
 
 static void return_job(struct job *job) {
-  t("RETURNED JOB");
   lock(&free_jobs.lock);
   job->next = free_jobs.head;
   free_jobs.head = job;
@@ -439,10 +398,10 @@ static noreturn void *write_thread(void* nothing) {
   // write the header
   struct gzip_header header;
   if (ifd == STDIN_FILENO) {
-    header = create_header(NULL, 0, pack_level);
+    header = create_header(NULL, pack_level);
     writen(ofd, (unsigned char *)&header, sizeof(header) - 2);
   } else {
-    header = create_header(ifname, 0, pack_level);
+    header = create_header(ifname, pack_level);
     writen(ofd, (unsigned char *)&header, sizeof(header) - 2);
     writen(ofd, (unsigned char *)ifname, strlen(ifname) + 1);
   }
@@ -478,7 +437,6 @@ static noreturn void *write_thread(void* nothing) {
     lock(&job->check_done);
     // assemble the checksum
     check = crc32_comb(check, job->check, job->check_done.value);
-    fprintf(stderr, "JUST GOT A CHECK: %lx, NEW TOTAL CHECK: %lx\n", job->check, check);
     
     ulen += job->check_done.value;
     
@@ -490,7 +448,6 @@ static noreturn void *write_thread(void* nothing) {
   } while (job->more);
 
   // write the trailer
-  fprintf(stderr, "CHECK: %lx\n", check);
   struct gzip_trailer trailer = create_trailer(check, ulen);
   writen(ofd, (unsigned char *)&trailer, sizeof(trailer));
   
@@ -507,7 +464,6 @@ static noreturn void *compress_thread(void* nothing) {
   stream.zalloc = Z_NULL;
   stream.opaque = Z_NULL;
   deflateInit2(&stream, pack_level, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
-  t("1");
   for (;;) {
     // get a job from the compress list
     lock(&compress_jobs.lock);
@@ -518,7 +474,6 @@ static noreturn void *compress_thread(void* nothing) {
       }
       wait(&compress_jobs.lock);
     }
-    t("2");
     // get a compress job
     job = compress_jobs.head;
     if (compress_jobs.head == compress_jobs.tail) {
@@ -526,31 +481,20 @@ static noreturn void *compress_thread(void* nothing) {
     }
     compress_jobs.head = compress_jobs.head->next;
     unlock(&compress_jobs.lock);
-    t("3");
     len = job->in->len;
     // reset stream
     deflateReset(&stream);
     // set the dictionary
     if (job->dict != NULL) {
-      t("!");
-      fprintf(stderr, "JOB %li, ABOUT TO USE DICT: %p\n", job->seq, job->dict);
-      fprintf(stderr, "dict->data: %p, dict->len: %lu\n", job->dict->data, job->dict->len);
-      fprintf(stderr, "job: %li, job->in->len: %lu\n", job->seq, job->in->len);
-      t("#");
       deflateSetDictionary(&stream, job->dict->data, DICTIONARY_SIZE);
-      t("a");
       // return the dictionary buffer
-      //fprintf(stdout, "DICT\n");
       return_buffer(job->dict);
     }
-    t("4");
     // get an out buffer
     job->out = get_buffer(&out_pool);
-    t("5");
     // set up stream struct
     stream.next_in = job->in->data;
     stream.next_out = job->out->data;
-    t("6");
     // check if this is the last (empty) block
     
     size_t left = job->in->len;
@@ -559,13 +503,11 @@ static noreturn void *compress_thread(void* nothing) {
       deflate_buffer(&stream, job->out, Z_NO_FLUSH);
       left -= MAXP2;
     }
-    t("7");
     stream.avail_in = (unsigned)left;
 
     if (job->more) {  
       // compress normally
       deflate_buffer(&stream, job->out, Z_BLOCK); 
-      t("8");
       int bits;
       deflatePending(&stream, Z_NULL, &bits);
       if (bits & 1) {
@@ -580,9 +522,7 @@ static noreturn void *compress_thread(void* nothing) {
     } else {
       // finish compression
       deflate_buffer(&stream, job->out, Z_FINISH);
-      t("9");
     }
-    t("10");
     // put job on the write list
     lock(&write_jobs.lock);
     struct job *prev = NULL;
@@ -591,7 +531,6 @@ static noreturn void *compress_thread(void* nothing) {
       prev = cur;
       cur = cur->next;
     }
-    t("11");
     if (write_jobs.head == NULL) {
       job->next = NULL;
       write_jobs.head = job;
@@ -604,7 +543,6 @@ static noreturn void *compress_thread(void* nothing) {
     }
     broadcast(&write_jobs.lock);
     unlock(&write_jobs.lock);
-    t("12");
     // calculate check
     len = job->in->len;
     unsigned char *next = job->in->data;
@@ -615,15 +553,11 @@ static noreturn void *compress_thread(void* nothing) {
       next += MAXP2;
     }
     check = crc32z(check, next, len);
-    fprintf(stderr, "job: %p, job->in: %p, job->in->data: %p, job->in->len: %lu, job->in->size: %lu\n", job, job->in, job->in->data, job->in->len, job->in->size);
-    fprintf(stderr, "CHECK: %lx\n", check);
     job->check_done.value = job->in->len;
     job->check = check;
     // unlock check
     unlock(&job->check_done);
-    t("13");
     // return in buffer
-    //fprintf(stdout, "IN\n");
     return_buffer(job->in);
   }
 
@@ -659,25 +593,17 @@ void parallel_zip(int pack_lev) {
   // file wasn't empty
   while(last_read != 0) {
     // get a job
-    t("WAITING FOR JOB");
     job = get_job(seq);
-    t("GOT A JOB");
     
     // read into it
     last_read = readn(ifd, job->in->data, IN_BUF_SIZE);
-    fprintf(stderr, "JOB: %li JUST READ: %lu bytes into %p\n",job->seq, last_read, job->in);
     job->in->len = last_read;
     last_job->more = last_read;
-//    fprintf(stderr, "JOB: %li, 
+
     // set the dict and prepare the dict for the next one
     if (last_job->in->len >= DICTIONARY_SIZE) {
-      t("+");
       job->dict = get_buffer(&dict_pool);
-      t("{");
-      fprintf(stderr, "JUST BEFORE MEMCPY dict->data: %p, in: %p, in->len: %lu, DSIZE: %d\n", job->dict->data, last_job->in, last_job->in->len, DICTIONARY_SIZE);
       memcpy(job->dict->data, last_job->in->data + last_job->in->len - DICTIONARY_SIZE, DICTIONARY_SIZE);
-      
-      t("}");
       job->dict->len = DICTIONARY_SIZE;
     } else {
       job->dict = NULL;
@@ -693,7 +619,6 @@ void parallel_zip(int pack_lev) {
       compress_jobs.tail = last_job;
     }
     broadcast(&compress_jobs.lock);
-    fprintf(stderr, "JUST PUT THIS ON COMPRESS LIST: job->in->len: %lu, job->dict: %p\n", last_job->in->len, last_job->dict);
     unlock(&compress_jobs.lock);
     
     // launch a compress thread if possible
@@ -705,8 +630,6 @@ void parallel_zip(int pack_lev) {
     last_job = job;
     seq++;
   }
-  t("READ FINISH");
-  
   
   // call the threads home
   pthread_join(write_thread_t, NULL);

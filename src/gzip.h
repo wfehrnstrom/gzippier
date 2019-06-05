@@ -145,6 +145,7 @@ extern off_t header_bytes;/* number of bytes in gzip header */
 
 extern int  ifd;        /* input file descriptor */
 extern int  ofd;        /* output file descriptor */
+extern int  threads;    /* number of compress threads */
 extern char ifname[];   /* input file name or "stdin" */
 extern char ofname[];   /* output file name or "stdout" */
 extern char *program_name;  /* program name */
@@ -205,6 +206,7 @@ extern int test;           /* check .z file integrity */
 extern int to_stdout;      /* output to stdout (-c) */
 extern int save_orig_name; /* set if original name must be saved */
 extern int no_name;        /* original name should not be restored */
+extern int pkzip;          /* global variable for pkzip */ 
 
 #define get_byte()  (inptr < insize ? inbuf[inptr++] : fill_inbuf(false, CHUNK))
 #define try_byte()  (inptr < insize ? inbuf[inptr++] : fill_inbuf(true, CHUNK))
@@ -324,9 +326,13 @@ extern void fprint_off    (FILE *, off_t, int);
 
         /* in inflate.c */
 extern int inflateGZIP (void);
+extern int inflatePKZIP (void);
 
         /* in dfltcc.c */
 #ifdef IBM_Z_DFLTCC
 extern int dfltcc_deflate (int pack_level);
 extern int dfltcc_inflate (void);
 #endif
+
+        /* in parallel.c */
+extern void parallel_zip (int pack_level);

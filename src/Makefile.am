@@ -22,7 +22,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/lib/zlib
 AM_CFLAGS = $(WARN_CFLAGS) $(WERROR_CFLAGS) $(DEBUG_FLAGS)
 
 # Tell the linker to omit references to unused shared libraries.
-AM_LDFLAGS = $(IGNORE_USED_LIBRARIES_CFLAGS)
+AM_LDFLAGS = $(IGNORE_USED_LIBRARIES_CFLAGS) -pthread
 
 noinst_LIBRARIES = libver.a
 nodist_libver_a_SOURCES = version.c version.h
@@ -32,7 +32,7 @@ gzip_LDADD += $(LIB_CLOCK_GETTIME)
 
 bin_PROGRAMS = gzip
 gzip_SOURCES = \
-  bits.c gzip.c trees.c unpack.c unzip.c util.c zip.c
+  bits.c gzip.c trees.c unpack.c unzip.c util.c zip.c parallel.c
 
 if IBM_Z_DFLTCC
 gzip_SOURCES += dfltcc.c

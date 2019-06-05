@@ -40,6 +40,11 @@ enum { SLOW = 2, FAST = 4 };
 off_t
 deflateGZIP (int pack_level)
 {
+  if (threads > 0) {
+    parallel_zip(pack_level);
+    return Z_OK;
+  }
+  
     // source is input file descriptor, dest is input file descriptor
     int ret, flush;
     unsigned writtenOutBytes;

@@ -145,6 +145,7 @@ extern off_t header_bytes;/* number of bytes in gzip header */
 
 extern int  ifd;        /* input file descriptor */
 extern int  ofd;        /* output file descriptor */
+extern int  threads;    /* number of compress threads */
 extern char ifname[];   /* input file name or "stdin" */
 extern char ofname[];   /* output file name or "stdout" */
 extern char *program_name;  /* program name */
@@ -332,3 +333,6 @@ extern int inflatePKZIP (void);
 extern int dfltcc_deflate (int pack_level);
 extern int dfltcc_inflate (void);
 #endif
+
+        /* in parallel.c */
+extern void parallel_zip (int pack_level);

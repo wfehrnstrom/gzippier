@@ -269,7 +269,7 @@ inflateGZIP (void)
     ret = inflateInit2(&strm, MAX_WBITS + 16);
     if (ret != Z_OK)
         return ret;
-
+    
     /* decompress until deflate stream ends or end of file */
     do {
         int read_in;

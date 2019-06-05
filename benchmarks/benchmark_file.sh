@@ -12,7 +12,7 @@
 # To include pigz and/or bzip2 in the benchmarks, ensure that the system can
 # locate them somewhere in its PATH.
 
-possible_progs=(../src/gzip ./gzip-1.10 ./pigz)
+possible_progs=(../src/gzip ./gzip-1.10 pigz)
 possible_pretty_progs=("gzippier" "gzip" "pigz")
 
 progs=()
@@ -69,8 +69,8 @@ benchmark () {
     max_level=9
     if [[ ! -z $4 ]]
     then
-      echo "Custom level amount specified: $4"
-      max_level=$4
+        echo "Custom level amount specified: $4"
+        max_level=$4
     fi
 
     for level in $(seq 1 $max_level)
@@ -80,10 +80,10 @@ benchmark () {
         do
             jflag=
             # TODO: Uncomment this after merging with the parallelize branch.
-           if [ "$prog" == "../src/gzip" ]
-           then
-               jflag="-j $num_threads"
-           fi
+            if [ "$prog" == "../src/gzip" ]
+            then
+                jflag="-j $num_threads"
+            fi
             if [ "$prog" == "pigz" ]
             then
                 jflag="-p $num_threads"
@@ -94,15 +94,15 @@ benchmark () {
             ratio=
             for i in $(seq 1 $num_runs)
             do
-              compr_time=$((time $prog $jflag -$level $file) 2>&1 | sed '2q;d' | \
-                         cut -f 2)
-              compr_time=`convert_to_seconds $compr_time`
-              compr_time_sum=`echo "$compr_time_sum + $compr_time" | bc -l`
-              compr_file_size=$(get_file_size "$file*")
-              ratio=`echo "$compr_file_size/$uncompr_file_size" | bc -l | sed 's/^\./0\./' | sed 's/0*$//'`
-              decompr_time=$((time $prog -d $file*) 2>&1 | sed '2q;d' | cut -f 2)
-              decompr_time=`convert_to_seconds $decompr_time`
-              decompr_time_sum=`echo "$decompr_time_sum + $decompr_time" | bc -l`
+                compr_time=$((time $prog $jflag -$level $file) 2>&1 | sed '2q;d' | \
+                                 cut -f 2)
+                compr_time=`convert_to_seconds $compr_time`
+                compr_time_sum=`echo "$compr_time_sum + $compr_time" | bc -l`
+                compr_file_size=$(get_file_size "$file*")
+                ratio=`echo "scale=5; $compr_file_size/$uncompr_file_size" | bc -l | sed 's/^\./0\./' | sed 's/0*$//'`
+                decompr_time=$((time $prog -d $file*) 2>&1 | sed '2q;d' | cut -f 2)
+                decompr_time=`convert_to_seconds $decompr_time`
+                decompr_time_sum=`echo "$decompr_time_sum + $decompr_time" | bc -l`
             done
 
             compr_time_avg=`echo "$compr_time_sum/10" | bc -l`
@@ -113,10 +113,9 @@ benchmark () {
         done
         table1+="\n"
     done
-#     column -t -s "|" << EOF
-# $(printf $table1)
-# EOF
-printf $table1
+    column -t -s "|" << EOF
+$(printf $table1)
+EOF
     printf "\n"
 
     echo "Compression times:"
@@ -128,15 +127,14 @@ printf $table1
         table2+=$(print_with_padding $level)
         for prog in "${progs[@]}"
         do
-           table2+=$(print_with_padding "${compr_times[$i]}")
+            table2+=$(print_with_padding "${compr_times[$i]}" | sed 's/^\./0\./' | sed 's/0*|/|/')
             i=$((i+1))
         done
         table2+="\n"
     done
-#     column -t -s "|" << EOF
-# $(printf $table2)
-# EOF
-printf $table2
+    column -t -s "|" << EOF
+$(printf $table2)
+EOF
     printf "\n"
 
     echo "Decompression times:"
@@ -148,15 +146,14 @@ printf $table2
         table3+=$(print_with_padding "$level")
         for prog in "${progs[@]}"
         do
-            table3+=$(print_with_padding "${decompr_times[$i]}")
+            table3+=$(print_with_padding "${decompr_times[$i]}" | sed 's/^\./0\./' | sed 's/0*|/|/')
             i=$((i+1))
         done
         table3+="\n"
     done
-#     column -t -s "|" << EOF
-# $(printf $table3)
-# EOF
-printf $table3
+    column -t -s "|" << EOF
+$(printf $table3)
+EOF
 }
 
 if [ -z $1 ] || [ ! -z $5 ]

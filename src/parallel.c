@@ -19,12 +19,6 @@
 #define DICTIONARY_SIZE 32768
 #define MAXP2 (UINT_MAX - (UINT_MAX >> 1))
 
-static struct buffer_pool in_pool;
-static struct buffer_pool out_pool;
-static struct buffer_pool dict_pool;
-static struct job_list compress_jobs;
-static struct job_list write_jobs;
-static struct job_list free_jobs;
 static int pack_level;
 
 struct gzip_header {
@@ -111,7 +105,7 @@ static int unlock(struct lock *lock) {
   return pthread_mutex_unlock(&lock->mutex);
 }
 
-static int wait(struct lock *lock) {
+static int wait_lock(struct lock *lock) {
   return pthread_cond_wait(&lock->cond, &lock->mutex);
 }
 
@@ -137,12 +131,16 @@ struct buffer {
   struct buffer *next;
 };
 
+static struct buffer_pool in_pool;
+static struct buffer_pool out_pool;
+static struct buffer_pool dict_pool;
+
 static struct buffer *get_buffer(struct buffer_pool *pool) {
   struct buffer *result;
   lock(&pool->lock);
   // wait until you can create a new buffer or grab an existing one
   while (pool->num_buffers == 0) {
-    wait(&pool->lock);
+    wait_lock(&pool->lock);
   }
   
   if (pool->head == NULL) {
@@ -225,6 +223,10 @@ struct job {
   struct job *next;
   int more;
 };
+
+static struct job_list compress_jobs;
+static struct job_list write_jobs;
+static struct job_list free_jobs;
 
 static struct job *get_job(long seq) {
   struct job* result;
@@ -420,7 +422,7 @@ static noreturn void *write_thread(void* nothing) {
     // wait for the next job in sequence
     lock(&write_jobs.lock);
     while ((write_jobs.head == NULL || seq != write_jobs.head->seq) && !write_jobs.lock.value) {
-      wait(&write_jobs.lock);
+      wait_lock(&write_jobs.lock);
     }
     if (write_jobs.lock.value) {
       break;
@@ -477,7 +479,7 @@ static noreturn void *compress_thread(void* nothing) {
 	unlock(&compress_jobs.lock);
 	pthread_exit(NULL);
       }
-      wait(&compress_jobs.lock);
+      wait_lock(&compress_jobs.lock);
     }
     // get a compress job
     job = compress_jobs.head;

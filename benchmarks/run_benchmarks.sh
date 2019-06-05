@@ -74,7 +74,7 @@ done
 #   curl "http://mirror.math.princeton.edu/pub/ubuntu-iso/16.04/ubuntu-16.04.6-desktop-amd64.iso" > ubuntu-16.04.6-desktop-amd64.iso
 # fi
 
-./benchmark_file.sh ubuntu-16.04.6-desktop-amd64.iso 4 1 > kernel.txt
+./benchmark_file.sh ubuntu-16.04.6-desktop-amd64.iso 4 1 1
 
 rm input
 rm ubuntu-16.04.6-desktop-amd64.iso

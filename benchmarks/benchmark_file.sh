@@ -12,8 +12,8 @@
 # To include pigz and/or bzip2 in the benchmarks, ensure that the system can
 # locate them somewhere in its PATH.
 
-possible_progs=(../src/gzip ./gzip-1.10 pigz bzip2)
-possible_pretty_progs=("gzippier" "gzip" "pigz" "bzip2")
+possible_progs=(../src/gzip ./gzip-1.10 pigz)
+possible_pretty_progs=("gzippier" "gzip" "pigz")
 
 progs=()
 pretty_progs=()
@@ -59,13 +59,20 @@ convert_to_minutes_and_seconds () {
 benchmark () {
     local file=$1
     local num_threads=$2
+    local do_levels=$4
     local compr_times=()
     local decompr_times=()
 
     echo "Compressed file sizes:"
     local table1=$(print_header level)
     table1+="\n"
-    for level in {1..9}
+    max_level=9
+    if [[ ! -z $4 ]]
+    then
+      max_level=$4
+    fi
+
+    for level in $(seq 1 $max_level)
     do
         table1+=$(print_with_padding $level)
         for prog in "${progs[@]}"
@@ -148,7 +155,7 @@ $(printf $table3)
 EOF
 }
 
-if [ -z $1 ] || [ ! -z $4 ]
+if [ -z $1 ] || [ ! -z $5 ]
 then
     echo "Usage: $0 <file> [<num_threads>]"
     exit 1

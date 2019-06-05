@@ -21,15 +21,17 @@
 
 static struct buffer_pool in_pool;
 static struct buffer_pool out_pool;
+static struct buffer_pool dict_pool;
 static struct job_list compress_jobs;
 static struct job_list write_jobs;
 static struct job_list free_jobs;
 static int pack_level;
 
 static void t(char const *str) {
-  pthread_t self;
-  self = pthread_self();
-  fprintf(stderr, "THREAD %lu: %s\n", self, str);
+  str = str;
+  //pthread_t self;
+  //self = pthread_self();
+  //fprintf(stderr, "THREAD %lu: %s\n", self, str);
 }
 
 struct gzip_header {
@@ -162,7 +164,18 @@ static struct buffer *get_buffer(struct buffer_pool *pool) {
     result = pool->head;
     pool->head = pool->head->next;
   }
-  if (pool == &in_pool) { fprintf(stderr, "GETTING IN BUFFER: %p, %p\n", result, result->next); }
+  if (pool == &in_pool) {
+    struct buffer *n = in_pool.head;
+    while (n != NULL && n != n->next) {
+      fprintf(stdout, "GET LIST: %p\n", n);
+      n = n->next;
+    }
+    fprintf(stdout, "GET LIST: %p\n", n);
+    fprintf(stdout, "============\n");
+
+    fprintf(stderr, "GETTING IN BUFFER: %p, %p\n", result, result->next);
+    //fprintf(stdout, "GETTING BUFFER: %p\n", result);
+  }
 
   pool->num_buffers--;
   unlock(&pool->lock);
@@ -171,13 +184,25 @@ static struct buffer *get_buffer(struct buffer_pool *pool) {
 
 static void return_buffer(struct buffer *buffer) {
   struct buffer_pool *pool = buffer->pool;
+  //if (pool == &in_pool) { fprintf(stdout, "RETURNING BUFFER: %p\n", buffer); }
   buffer->len = 0;
   lock(&pool->lock);
   t("LOCK");
   buffer->next = pool->head;
   pool->head = buffer;
   pool->num_buffers++;
-
+  if (pool->head != NULL && pool->head == pool->head->next) {
+    t("\n\n\n\n\n\n\n");
+  }
+  if (pool == &in_pool) {
+    struct buffer *n = in_pool.head;
+    while (n != NULL && n != n->next) {
+      fprintf(stdout, "RETURN LIST: %p\n", n);
+      n = n->next;
+    }
+    fprintf(stdout, "RETURN LIST: %p\n", n);
+    fprintf(stdout, "============\n");
+  }
   broadcast(&pool->lock);
   t("UNLOCK");
   unlock(&pool->lock);
@@ -208,7 +233,7 @@ static inline size_t grow(size_t size) {
 static void grow_buffer(struct buffer *buffer) {
   buffer->size = grow(buffer->size);
   buffer->data = realloc(buffer->data, buffer->size);
-  fprintf(stdout, "buffer->data: %p, buffer->size: %lu\n", buffer->data, buffer->size);
+  //fprintf(stdout, "buffer->data: %p, buffer->size: %lu\n", buffer->data, buffer->size);
 }
 
 // Jobs and helpers
@@ -262,11 +287,6 @@ static void return_job(struct job *job) {
   lock(&free_jobs.lock);
   job->next = free_jobs.head;
   free_jobs.head = job;
-  struct job *n = free_jobs.head;
-  while (n != NULL) {
-    fprintf(stderr, "JOB ON LIST: %p\n", n);
-    n = n->next;
-  }
   broadcast(&free_jobs.lock);
   unlock(&free_jobs.lock);
 }
@@ -285,6 +305,12 @@ static void init_pools(void) {
   out_pool.head = NULL;
   out_pool.buffer_size = OUT_BUF_SIZE;
   out_pool.num_buffers = -1;
+
+  // dictionary pool
+  init_lock(&dict_pool.lock);
+  dict_pool.head = NULL;
+  dict_pool.buffer_size = DICTIONARY_SIZE;
+  dict_pool.num_buffers = -1;
 }
 
 static void init_jobs(void) {
@@ -511,19 +537,11 @@ static noreturn void *compress_thread(void* nothing) {
       fprintf(stderr, "dict->data: %p, dict->len: %lu\n", job->dict->data, job->dict->len);
       fprintf(stderr, "job: %li, job->in->len: %lu\n", job->seq, job->in->len);
       t("#");
-      deflateSetDictionary(&stream, job->dict->data + (job->dict->len - DICTIONARY_SIZE), DICTIONARY_SIZE);
+      deflateSetDictionary(&stream, job->dict->data, DICTIONARY_SIZE);
       t("a");
-      // return the dictionary buffer if possible
-      lock(&job->dict->lock);
-      fprintf(stderr, "JOB: %li has dict %p with value: %li\n", job->seq, job->dict, job->dict->lock.value);
-      if (job->dict->lock.value == 0) {
-	return_buffer(job->dict);
-	fprintf(stderr, "JOB: %li dropped dict buffer %p\n", job->seq, job->dict);
-      } else {
-	job->dict->lock.value--;
-      }
-      unlock(&job->dict->lock);
-      t("b");
+      // return the dictionary buffer
+      //fprintf(stdout, "DICT\n");
+      return_buffer(job->dict);
     }
     t("4");
     // get an out buffer
@@ -531,7 +549,7 @@ static noreturn void *compress_thread(void* nothing) {
     t("5");
     // set up stream struct
     stream.next_in = job->in->data;
-    stream.avail_in = job->in->len;
+    stream.next_out = job->out->data;
     t("6");
     // check if this is the last (empty) block
     
@@ -604,17 +622,9 @@ static noreturn void *compress_thread(void* nothing) {
     // unlock check
     unlock(&job->check_done);
     t("13");
-    // return in buffer if you can
-    lock(&job->in->lock);
-    fprintf(stderr, "JOB: %li has in %p with value: %li\n", job->seq, job->in, job->in->lock.value);
-    if (true) {//job->in->lock.value == 0) {
-      return_buffer(job->in);
-      fprintf(stderr, "JOB: %li dropped in buffer %p\n", job->seq, job->in);
-    } else {
-      job->in->lock.value--;
-    }
-    unlock(&job->in->lock);
-    t("14");
+    // return in buffer
+    //fprintf(stdout, "IN\n");
+    return_buffer(job->in);
   }
 
   deflateEnd(&stream);
@@ -660,21 +670,20 @@ void parallel_zip(int pack_lev) {
     last_job->more = last_read;
 //    fprintf(stderr, "JOB: %li, 
     // set the dict and prepare the dict for the next one
-    if (false) {//last_job->in->len >= DICTIONARY_SIZE) {
-      fprintf(stderr, "ABOUT TO BE DICT NEXT: dict->data: %p, dict->len: %lu, last_read: %lu\n", job->in->data, job->in->len, last_read);
-      job->dict = last_job->in;
-      job->dict->lock.value = 1;
+    if (last_job->in->len >= DICTIONARY_SIZE) {
+      t("+");
+      job->dict = get_buffer(&dict_pool);
+      t("{");
+      fprintf(stderr, "JUST BEFORE MEMCPY dict->data: %p, in: %p, in->len: %lu, DSIZE: %d\n", job->dict->data, last_job->in, last_job->in->len, DICTIONARY_SIZE);
+      memcpy(job->dict->data, last_job->in->data + last_job->in->len - DICTIONARY_SIZE, DICTIONARY_SIZE);
+      
+      t("}");
+      job->dict->len = DICTIONARY_SIZE;
     } else {
-      //job->dict->lock.value = 0;
       job->dict = NULL;
     }
     
     // put the previous job on the back of the compress list
-    if (!last_job->more) {
-      last_job->in->lock.value = 0;
-    }
-    
-    //if (last_job != NULL) {
     lock(&compress_jobs.lock);
     if (compress_jobs.head == NULL) {
       compress_jobs.head = last_job;
@@ -692,7 +701,6 @@ void parallel_zip(int pack_lev) {
       pthread_create(compression_threads_t + threads_compressing, NULL, compress_thread, NULL);
       threads_compressing++;
     }
-    //}
     
     last_job = job;
     seq++;
@@ -711,4 +719,7 @@ void parallel_zip(int pack_lev) {
   }
   return_buffer(last_job->in);
   return_job(last_job);
+  if (last_job->dict != NULL) {
+    return_buffer(last_job->dict);
+  }
 }

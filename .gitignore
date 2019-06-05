@@ -14,6 +14,7 @@
 /INSTALL
 /README-release
 /aclocal.m4
+/benchmarks/gzip-1.10
 /build-aux
 /config.status
 /configure

@@ -22,12 +22,13 @@ SRC = src
 ALL_RECURSIVE_TARGETS = $(SRC)
 BUILT_SOURCES =
 
+SUBDIRS = lib doc $(SRC) . tests benchmarks
+AM_CPPFLAGS = -I$(top_srcdir)/lib
+AM_CFLAGS = $(WARN_CFLAGS) $(WERROR_CFLAGS)
+
 if ZLIB_MAKEFILE
   ZLIB_SRC = lib/zlib
 endif
-SUBDIRS = $(ZLIB_SRC) lib doc $(SRC) . tests
-AM_CPPFLAGS = -I$(top_srcdir)/lib
-AM_CFLAGS = $(WARN_CFLAGS) $(WERROR_CFLAGS)
 
 DISTCLEANFILES = $(SRC)/version.c $(SRC)/version.h
 

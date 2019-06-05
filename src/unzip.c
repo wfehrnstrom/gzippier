@@ -1,4 +1,4 @@
-/* unzip.c -- decompress files in gzip or pkzip format.
+/* unzip.c -- decompress files in gzip
 
    Copyright (C) 1997-1999, 2009-2019 Free Software Foundation, Inc.
    Copyright (C) 1992-1993 Jean-loup Gailly
@@ -111,8 +111,10 @@ check_zipfile (int in)
 }
 
 /* Inflate pkzip files using zlib
+ *
+ * This function assumes that check_zipfile has already been run, and that inptr
+ * points to the start of the data.
  */
-
 int 
 inflatePKZIP (void)
 {
@@ -129,10 +131,11 @@ inflatePKZIP (void)
     memzero(in, CHUNK);
     memzero(out, CHUNK);
 
-    if (insize > 0)
+    // assumes that check_zipfile incremented inptr to the first data value.
+    if ((insize - inptr) > 0)
       {
-          memmove ((char *) in, (char *)inbuf, insize);
-          bytes_to_read -= insize;
+          memmove ((char *) in, (char *)(inbuf + inptr), insize - inptr);
+          bytes_to_read -= (insize - inptr);
           read_prev = true;
       }
 
@@ -150,7 +153,7 @@ inflatePKZIP (void)
     do {
         int read_in;
         if (read_prev) {
-            read_in = read(source, in + insize, bytes_to_read);
+            read_in = read(source, in + (insize-inptr), bytes_to_read);
         } else {
             read_in = read(source, in, CHUNK);
         }
@@ -162,11 +165,10 @@ inflatePKZIP (void)
         else
           {
             if (read_prev) {
-                strm.avail_in = read_in + insize;
+                strm.avail_in = read_in + (insize-inptr);
                 read_prev = false;
             } else {
                 strm.avail_in = read_in;
-                /* insize += read_in; */
             }
           }
         if (strm.avail_in == 0) {
@@ -272,7 +274,6 @@ inflateGZIP (void)
                 read_prev = false;
             } else {
                 strm.avail_in = read_in;
-                /* insize += read_in; */
             }
           }
         if (strm.avail_in == 0) {
@@ -343,6 +344,7 @@ unzip (int in, int out)
 
       if (pkzip == 1) {
         res = inflatePKZIP (); 
+        pkzip = 1 // set for next file
       } else {
 
 #ifdef IBM_Z_DFLTCC

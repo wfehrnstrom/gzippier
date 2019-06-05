@@ -86,9 +86,9 @@ benchmark () {
             fi
             compr_time_sum="0"
             decompr_time_sum="0"
-            num_runs=10
+            num_runs=$3
             ratio=
-            for i in {1..10}
+            for i in $(seq 1 $num_runs)
             do
               compr_time=$((time $prog $jflag -$level $file) 2>&1 | sed '2q;d' | \
                          cut -f 2)
@@ -97,12 +97,13 @@ benchmark () {
               compr_file_size=$(get_file_size "$file*")
               ratio=`echo "$compr_file_size/$uncompr_file_size" | bc -l`
               decompr_time=$((time $prog -d $file*) 2>&1 | sed '2q;d' | cut -f 2)
-              decompr_time_sum=$(($decompr_time_sum + $decompr_time_sum))
+              decompr_time=`convert_to_seconds $decompr_time`
+              decompr_time_sum=`echo "$decompr_time_sum + $decompr_time" | bc -l`
             done
 
             compr_time_avg=`echo "$compr_time_sum/10" | bc -l`
             decompr_time_avg=`echo "$decompr_time_sum/10" | bc -l`
-            compr_times+=$(convert_to_minutes_and_seconds $compr_time_avg)
+            compr_times+=($compr_time_avg)
             decompr_times+=($decompr_time_avg)
             print_with_padding $ratio
         done
@@ -140,7 +141,7 @@ benchmark () {
     done
 }
 
-if [ -z $1 ] || [ ! -z $3 ]
+if [ -z $1 ] || [ ! -z $4 ]
 then
     echo "Usage: $0 <file> [<num_threads>]"
     exit 1
@@ -156,7 +157,7 @@ fi
 uncompr_file_size=$(get_file_size $file)
 
 echo "Running benchmarks on $file..."
-echo "Uncompressed file size: $file_size"
+echo "Uncompressed file size: $uncompr_file_size"
 echo "Number of threads for gzippier and pigz: $num_threads"
 printf "\n"
 

@@ -42,13 +42,16 @@ download=$1
 if [[ download ]]
 then
   echo "Downloading resources."
-  ./get.sh "http://ftp.gnu.org/gnu/gzip/gzip-1.10.tar.xz" "gzip-1.10.tar.xz"
+  if [[ ! $(command -v ./gzip-1.10) ]]
+  then
+    ./get.sh "http://ftp.gnu.org/gnu/gzip/gzip-1.10.tar.xz" "gzip-1.10.tar.xz"
+  fi
 fi
 echo "Testing Text file(s) ..."
 print_separator
 echo ""
 file=original.txt
-./benchmark_file.sh $file 1
+./benchmark_file.sh $file 1 10
 
 # Now test files of random bytes of different sizes
 sizes=(100 1024 102400 1048576)
@@ -58,10 +61,20 @@ echo ""
 for size in "${sizes[@]}"
 do
   generate_random $size
-  ./benchmark_file.sh input 1
+  if [[ $size -lt 1000 ]]
+  then
+    ./benchmark_file.sh input 1 10
+  else
+    ./benchmark_file.sh input 1 1
+  fi
 done
 
-rm input
+# if [[ ! `ls -l "http://mirror.math.princeton.edu/pub/ubuntu-iso/16.04/ubuntu-16.04.6-desktop-amd64.iso"` ]]
+# then
+#   curl "http://mirror.math.princeton.edu/pub/ubuntu-iso/16.04/ubuntu-16.04.6-desktop-amd64.iso" > ubuntu-16.04.6-desktop-amd64.iso
+# fi
 
-# http://ftp.gnu.org/gnu/gzip/gzip-1.10.tar.xz
-# gzip-1.10.tar.xz
+./benchmark_file.sh ubuntu-16.04.6-desktop-amd64.iso 4 1 > kernel.txt
+
+rm input
+rm ubuntu-16.04.6-desktop-amd64.iso

@@ -53,28 +53,36 @@ echo ""
 file=original.txt
 ./benchmark_file.sh $file 1 10
 
-# Now test files of random bytes of different sizes
-sizes=(100 1024 102400 1048576)
-echo "Testing random byte file(s) ..."
-print_separator
-echo ""
-for size in "${sizes[@]}"
-do
-  generate_random $size
-  if [[ $size -lt 1000 ]]
-  then
-    ./benchmark_file.sh input 1 10
-  else
-    ./benchmark_file.sh input 1 1
-  fi
-done
-
 # if [[ ! `ls -l "http://mirror.math.princeton.edu/pub/ubuntu-iso/16.04/ubuntu-16.04.6-desktop-amd64.iso"` ]]
 # then
 #   curl "http://mirror.math.princeton.edu/pub/ubuntu-iso/16.04/ubuntu-16.04.6-desktop-amd64.iso" > ubuntu-16.04.6-desktop-amd64.iso
 # fi
 
-./benchmark_file.sh ubuntu-16.04.6-desktop-amd64.iso 4 1 1
+# ./benchmark_file.sh ubuntu-16.04.6-desktop-amd64.iso 4 1 1
 
-rm input
-rm ubuntu-16.04.6-desktop-amd64.iso
+# ./benchmark_file.sh jamesjoyceulysses.pdf 1 20
+# echo "4 Threads..."
+# print_separator
+# ./benchmark_file.sh jamesjoyceulysses.pdf 4 20
+#
+# echo "1 Thread..."
+# print_separator
+# ./benchmark_file.sh all 1 1
+# echo "2 Threads..."
+# print_separator
+# ./benchmark_file.sh all 2 1
+# echo "4 Threads..."
+# print_separator
+# ./benchmark_file.sh all 4 1
+# echo "8 Threads..."
+# print_separator
+# ./benchmark_file.sh all 8 1
+
+./benchmark_file.sh acl-resources.txt 1 20 # 10KB
+./benchmark_file.sh MAINTAINERS 1 5 #500KB
+./benchmark_file.sh megabook 1 # 5 MB
+./benchmark_file.sh megabook 5 # 5 MB, 5 threads
+
+
+# rm input
+# rm ubuntu-16.04.6-desktop-amd64.iso

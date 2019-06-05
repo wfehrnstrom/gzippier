@@ -12,7 +12,7 @@
 # To include pigz and/or bzip2 in the benchmarks, ensure that the system can
 # locate them somewhere in its PATH.
 
-possible_progs=(../src/gzip ./gzip-1.10 pigz)
+possible_progs=(../src/gzip ./gzip-1.10 ./pigz)
 possible_pretty_progs=("gzippier" "gzip" "pigz")
 
 progs=()
@@ -69,6 +69,7 @@ benchmark () {
     max_level=9
     if [[ ! -z $4 ]]
     then
+      echo "Custom level amount specified: $4"
       max_level=$4
     fi
 
@@ -79,10 +80,10 @@ benchmark () {
         do
             jflag=
             # TODO: Uncomment this after merging with the parallelize branch.
-#            if [ "$prog" == "../src/gzip" ]
-#            then
-#                jflag="-j $num_threads"
-#            fi
+           if [ "$prog" == "../src/gzip" ]
+           then
+               jflag="-j $num_threads"
+           fi
             if [ "$prog" == "pigz" ]
             then
                 jflag="-p $num_threads"
@@ -112,9 +113,10 @@ benchmark () {
         done
         table1+="\n"
     done
-    column -t -s "|" << EOF
-$(printf $table1)
-EOF
+#     column -t -s "|" << EOF
+# $(printf $table1)
+# EOF
+printf $table1
     printf "\n"
 
     echo "Compression times:"
@@ -131,9 +133,10 @@ EOF
         done
         table2+="\n"
     done
-    column -t -s "|" << EOF
-$(printf $table2)
-EOF
+#     column -t -s "|" << EOF
+# $(printf $table2)
+# EOF
+printf $table2
     printf "\n"
 
     echo "Decompression times:"
@@ -142,7 +145,7 @@ EOF
     i=0
     for level in {1..9}
     do
-        table3+=$(print_with_padding $level)
+        table3+=$(print_with_padding "$level")
         for prog in "${progs[@]}"
         do
             table3+=$(print_with_padding "${decompr_times[$i]}")
@@ -150,9 +153,10 @@ EOF
         done
         table3+="\n"
     done
-    column -t -s "|" << EOF
-$(printf $table3)
-EOF
+#     column -t -s "|" << EOF
+# $(printf $table3)
+# EOF
+printf $table3
 }
 
 if [ -z $1 ] || [ ! -z $5 ]

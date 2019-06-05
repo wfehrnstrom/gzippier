@@ -198,8 +198,13 @@ static inline size_t grow(size_t size) {
 }
 
 static void grow_buffer(struct buffer *buffer) {
-  buffer->size = grow(buffer->size);
-  buffer->data = realloc(buffer->data, buffer->size);
+  unsigned char *tmp;
+  size_t bigger = grow(buffer->size);
+  tmp = realloc(buffer->data, buffer->size);
+  if (tmp != NULL) {
+    buffer->size = bigger;
+    buffer->data = tmp;
+  }
 }
 
 // Jobs and helpers

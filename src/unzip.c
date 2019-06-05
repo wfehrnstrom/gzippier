@@ -47,7 +47,7 @@
 #define  EXTFLG 8               /*  bit for extended local header */
 #define LOCHOW 8                /* offset of compression method */
 /* #define LOCTIM 10               UNUSED file mod time (for decryption) */
-/* #define LOCCRC 14               UNUSED offset of crc */
+#define LOCCRC 14               /* offset of crc */
 /* #define LOCSIZ 18               UNUSED offset of compressed size */
 /* #define LOCLEN 22               UNUSED offset of uncompressed length */
 #define LOCFIL 26               /* offset of file name field length */
@@ -131,6 +131,12 @@ inflatePKZIP (void)
     memzero(in, CHUNK);
     memzero(out, CHUNK);
 
+    // get crc32 from header
+    uLong original_crc = crc32(0L, Z_NULL, 0);
+    // offset by 14 bytes into inbuf, copy 4 bytes
+    memcpy(&original_crc, inbuf + LOCCRC, 4); 
+    uLong crc = crc32(0L, Z_NULL, 0);
+
     // assumes that check_zipfile incremented inptr to the first data value.
     if ((insize - inptr) > 0)
       {
@@ -200,6 +206,11 @@ inflatePKZIP (void)
                   return ret;
             }
             writtenOutBytes = CHUNK - strm.avail_out;
+
+            uLong new_crc = crc32(0L, Z_NULL, 0);
+            new_crc = crc32_z(new_crc, out, writtenOutBytes);
+            crc = crc32_combine(crc, new_crc, writtenOutBytes);
+
             int bytes_written = write(dest, out, writtenOutBytes);
             if (bytes_written != writtenOutBytes) {
                 (void)inflateEnd(&strm);
@@ -216,6 +227,11 @@ inflatePKZIP (void)
       return Z_STREAM_ERROR;
   }
   int result = ret == Z_STREAM_END ? Z_OK : Z_DATA_ERROR;
+  
+  // CRC32 check
+  if (crc != original_crc) {
+      result = Z_DATA_ERROR;
+  }
   return result;
 }
 
@@ -344,7 +360,6 @@ unzip (int in, int out)
 
       if (pkzip == 1) {
         res = inflatePKZIP (); 
-        pkzip = 1 // set for next file
       } else {
 
 #ifdef IBM_Z_DFLTCC
@@ -363,6 +378,10 @@ unzip (int in, int out)
         {
           gzip_error ("invalid compressed data--format violated");
         }
+
+      if (pkzip == 1) {
+        pkzip = 0; // set for next file
+      }
     }
   else 
     {

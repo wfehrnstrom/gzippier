@@ -35,12 +35,7 @@ get_file_size () {
 
 print_with_padding () {
     local str=$1
-    printf "$str"
-    if [ ${#str} -lt 7 ]
-    then
-        printf "\t"
-    fi
-    printf "\t"
+    printf "$str|"
 }
 
 print_header () {
@@ -58,7 +53,7 @@ convert_to_seconds () {
 }
 
 convert_to_minutes_and_seconds () {
-    echo "$(bc <<< $1/60)m$(bc <<< $1%60)s"
+    echo "$(bc <<< $1/60)m$(bc <<< $1%60 | sed 's/0*$//')s" | sed 's/m\./m0\./' | sed 's/^0m//'
 }
 
 benchmark () {
@@ -68,10 +63,11 @@ benchmark () {
     local decompr_times=()
 
     echo "Compressed file sizes:"
-    print_header level
+    local table1=$(print_header level)
+    table1+="\n"
     for level in {1..9}
     do
-        print_with_padding $level
+        table1+=$(print_with_padding $level)
         for prog in "${progs[@]}"
         do
             jflag=
@@ -95,49 +91,60 @@ benchmark () {
               compr_time=`convert_to_seconds $compr_time`
               compr_time_sum=`echo "$compr_time_sum + $compr_time" | bc -l`
               compr_file_size=$(get_file_size "$file*")
-              ratio=`echo "$compr_file_size/$uncompr_file_size" | bc -l`
+              ratio=`echo "$compr_file_size/$uncompr_file_size" | bc -l | sed 's/^\./0\./' | sed 's/0*$//'`
               decompr_time=$((time $prog -d $file*) 2>&1 | sed '2q;d' | cut -f 2)
               decompr_time_sum=$(($decompr_time_sum + $decompr_time_sum))
             done
 
             compr_time_avg=`echo "$compr_time_sum/10" | bc -l`
             decompr_time_avg=`echo "$decompr_time_sum/10" | bc -l`
-            compr_times+=$(convert_to_minutes_and_seconds $compr_time_avg)
+            compr_times+=($(convert_to_minutes_and_seconds $compr_time_avg))
             decompr_times+=($decompr_time_avg)
-            print_with_padding $ratio
+            table1+=$(print_with_padding $ratio)
         done
-        printf "\n"
+        table1+="\n"
     done
+    column -t -s "|" << EOF
+$(printf $table1)
+EOF
     printf "\n"
 
     echo "Compression times:"
-    print_header level
+    local table2=$(print_header level)
+    table2+="\n"
     i=0
     for level in {1..9}
     do
-        print_with_padding $level
+        table2+=$(print_with_padding $level)
         for prog in "${progs[@]}"
         do
-           print_with_padding "${compr_times[$i]}"
+           table2+=$(print_with_padding "${compr_times[$i]}")
             i=$((i+1))
         done
-        printf "\n"
+        table2+="\n"
     done
+    column -t -s "|" << EOF
+$(printf $table2)
+EOF
     printf "\n"
 
     echo "Decompression times:"
-    print_header level
+    local table3=$(print_header level)
+    table3+="\n"
     i=0
     for level in {1..9}
     do
-        print_with_padding $level
+        table3+=$(print_with_padding $level)
         for prog in "${progs[@]}"
         do
-            print_with_padding "${decompr_times[$i]}"
+            table3+=$(print_with_padding "${decompr_times[$i]}")
             i=$((i+1))
         done
-        printf "\n"
+        table3+="\n"
     done
+    column -t -s "|" << EOF
+$(printf $table3)
+EOF
 }
 
 if [ -z $1 ] || [ ! -z $3 ]

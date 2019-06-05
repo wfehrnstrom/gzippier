@@ -15,7 +15,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # Removed trailing-nul: at present not run because gzip no longer warns about
-# Trailing null bytes as of zlib integration.
+# Removed mixed: at present not run because gzip no longer warns about
+# Trailing null bytes as of zlib integration. memcpy-abuse removed temporarily
 
 TESTS =					\
   helin-segv				\
@@ -23,8 +24,6 @@ TESTS =					\
   hufts					\
   keep					\
   list					\
-  memcpy-abuse				\
-  mixed					\
   null-suffix-clobber			\
   reproducible				\
   stdin					\

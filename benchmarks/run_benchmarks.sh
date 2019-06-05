@@ -61,5 +61,7 @@ do
   ./benchmark_file.sh input 1
 done
 
+rm input
+
 # http://ftp.gnu.org/gnu/gzip/gzip-1.10.tar.xz
 # gzip-1.10.tar.xz

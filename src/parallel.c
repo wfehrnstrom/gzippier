@@ -562,10 +562,10 @@ static noreturn void *compress_thread(void* nothing) {
     check = crc32z(check, next, len);
     job->check_done.value = job->in->len;
     job->check = check;
-    // unlock check
-    unlock(&job->check_done);
     // return in buffer
     return_buffer(job->in);
+    // unlock check
+    unlock(&job->check_done);
   }
 
   deflateEnd(&stream);

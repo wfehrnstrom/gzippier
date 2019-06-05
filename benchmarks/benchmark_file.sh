@@ -53,6 +53,14 @@ print_header () {
     printf "\n"
 }
 
+convert_to_seconds () {
+    bc <<< $(echo "$1" | sed 's/m.*$//')*60+$(echo "$1" | sed 's/^.*m//' | sed 's/s$//')
+}
+
+convert_to_minutes_and_seconds () {
+    echo "$(bc <<< $1/60)m$(bc <<< $1%60)s"
+}
+
 benchmark () {
     local file=$1
     local num_threads=$2
@@ -76,16 +84,27 @@ benchmark () {
             then
                 jflag="-p $num_threads"
             fi
+            compr_time_sum="0"
+            decompr_time_sum="0"
+            num_runs=10
+            ratio=
+            for i in {1..10}
+            do
+              compr_time=$((time $prog $jflag -$level $file) 2>&1 | sed '2q;d' | \
+                         cut -f 2)
+              compr_time=`convert_to_seconds $compr_time`
+              compr_time_sum=`echo "$compr_time_sum + $compr_time" | bc -l`
+              compr_file_size=$(get_file_size "$file*")
+              ratio=`echo "$compr_file_size/$uncompr_file_size" | bc -l`
+              decompr_time=$((time $prog -d $file*) 2>&1 | sed '2q;d' | cut -f 2)
+              decompr_time_sum=$(($decompr_time_sum + $decompr_time_sum))
+            done
 
-            time=$((time $prog $jflag -$level $file) 2>&1 | sed '2q;d' | \
-                       cut -f 2)
-            compr_times+=($time)
-
-            file_size=$(get_file_size "$file*")
-            print_with_padding $file_size
-
-            time=$((time $prog -d $file*) 2>&1 | sed '2q;d' | cut -f 2)
-            decompr_times+=($time)
+            compr_time_avg=`echo "$compr_time_sum/10" | bc -l`
+            decompr_time_avg=`echo "$decompr_time_sum/10" | bc -l`
+            compr_times+=$(convert_to_minutes_and_seconds $compr_time_avg)
+            decompr_times+=($decompr_time_avg)
+            print_with_padding $ratio
         done
         printf "\n"
     done
@@ -99,7 +118,7 @@ benchmark () {
         print_with_padding $level
         for prog in "${progs[@]}"
         do
-            print_with_padding "${compr_times[$i]}"
+           print_with_padding "${compr_times[$i]}"
             i=$((i+1))
         done
         printf "\n"
@@ -134,7 +153,7 @@ then
     num_threads=$2
 fi
 
-file_size=$(get_file_size $file)
+uncompr_file_size=$(get_file_size $file)
 
 echo "Running benchmarks on $file..."
 echo "Uncompressed file size: $file_size"

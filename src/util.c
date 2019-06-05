@@ -109,7 +109,7 @@ int copy(int source, int dest) /* input and output file descriptors */
     unsigned char in[CHUNK];
     bool read_prev = false;
     int bytes_to_read = CHUNK;
-    int COPY_ERROR = -1;
+    const int COPY_ERROR = -1;
 
     memzero(in, CHUNK);
 
@@ -132,12 +132,14 @@ int copy(int source, int dest) /* input and output file descriptors */
 
         if (read_in < 0)
           {
+            fprintf (stderr, "read failed: %s\n", strerror(errno));
             return COPY_ERROR;
           }
 
         read_in += insize;
         bytes_written = write(dest, in, read_in);
         if (bytes_written != read_in) {
+            fprintf (stderr, "write failed: %s\n", strerror(errno));
             return COPY_ERROR;
         }
     } while (read_in == bytes_to_read);

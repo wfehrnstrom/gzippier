@@ -28,10 +28,10 @@ fail=0
 
 for i in 0 00 1; do
   gzip -d $i.gz; ret=$?
-  test $ret -eq $i || (fail=1 && echo "FAIL Equality:$i")
+  test $ret -eq $i || fail=1
   test $ret = 1 && continue
-  echo $i > exp || (fail=1 && echo "FAIL echo :$i")
-  compare exp $i || (fail=1 && echo "FAIL compare: $i")
+  echo $i > exp || fail=1
+  compare exp $i || fail=1
 done
 
 Exit $fail

@@ -184,6 +184,10 @@ inflateGZIP (void)
              * we've processed all of the gzipped input.
              * TODO: remove this side effect dependent code by removing
              * branching on inptr.
+             * TODO: inflate internally discards garbage bytes not part of the
+             * compressed input. As of zlib integration, gzip no longer warns
+             * about the discarding of these bytes if they are nonzero.
+             * Previously, gzip did warn about the discarding of these bytes.
              */
             inptr = strm.total_in;
             assert(ret != Z_STREAM_ERROR);  /* state not clobbered */

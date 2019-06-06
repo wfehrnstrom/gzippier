@@ -32,7 +32,7 @@ gzip_LDADD += $(LIB_CLOCK_GETTIME)
 
 bin_PROGRAMS = gzip
 gzip_SOURCES = \
-  bits.c gzip.c trees.c unpack.c unzip.c util.c zip.c parallel.c
+  bits.c gzip.c trees.c unpack.c unzip.c util.c parallel.c zip.c
 
 if IBM_Z_DFLTCC
 gzip_SOURCES += dfltcc.c

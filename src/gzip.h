@@ -333,4 +333,4 @@ extern int dfltcc_inflate (void);
 #endif
 
         /* in parallel.c */
-extern void parallel_zip (int pack_level);
+extern off_t parallel_zip (int pack_level);

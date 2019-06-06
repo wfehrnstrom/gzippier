@@ -1,8 +1,3 @@
-// TODO: error checking on all mallocs
-// TODO: error checking on reads and writes
-// TODO: add error check to zlib functions
-// TODO: fix race condition
-
 #include <stdint.h>
 #include <pthread.h>
 #include <sys/types.h>
@@ -14,12 +9,16 @@
 #include "zlib.h"
 #include <time.h>
 
+// initial buffer sizes
 #define IN_BUF_SIZE 131072
 #define OUT_BUF_SIZE 32768
 #define DICTIONARY_SIZE 32768
 #define MAXP2 (UINT_MAX - (UINT_MAX >> 1))
 
+// compression level
 static int pack_level;
+
+// headers and trailers
 
 struct gzip_header {
   uint8_t magic1;
@@ -31,7 +30,9 @@ struct gzip_header {
   uint8_t os;
 };
 
-static struct gzip_header create_header(char const *name, int level) {
+static struct gzip_header
+create_header(char const *name, int level)
+{
   struct gzip_header header;
   header.magic1 = 31;
   header.magic2 = 139;
@@ -49,30 +50,41 @@ struct gzip_trailer {
   uint32_t uncompressed_len;
 };
 
-static struct gzip_trailer create_trailer(unsigned long check, size_t ulen) {
+static struct gzip_trailer
+create_trailer(unsigned long check, size_t ulen)
+{
   struct gzip_trailer trailer;
   trailer.check = check;
   trailer.uncompressed_len = ulen;
   return trailer;
 }
 
-static size_t readn(int fd, unsigned char *buf, size_t len) {
+// i/o helpers
+
+static ssize_t
+readn(int fd, unsigned char *buf, size_t len)
+{
   ssize_t result;
-  size_t amount = 0;
+  ssize_t amount = 0;
 
   while (len) {
     result = read(fd, buf, len);
+    if (result < 0) {
+      return result;
+    }
     if (result == 0) {
       break;
     }
     buf += result;
-    amount += (size_t)result;
+    amount += result;
     len -= (size_t)result;
   }
   return amount;
 }
 
-static void writen(int fd, unsigned char const *buf, size_t len) {
+static void
+writen(int fd, unsigned char const *buf, size_t len)
+{
   size_t const max = SIZE_MAX >> 1;
   ssize_t result;
   
@@ -83,7 +95,7 @@ static void writen(int fd, unsigned char const *buf, size_t len) {
   }
 }
 
-// Locks and helpers
+// Lock helpers
 
 struct lock {
   pthread_mutex_t mutex;
@@ -91,29 +103,39 @@ struct lock {
   long value;
 };
 
-static void init_lock(struct lock *lock) {
+static void
+init_lock(struct lock *lock)
+{
   pthread_mutex_init(&lock->mutex, NULL);
   pthread_cond_init(&lock->cond, NULL);
   lock->value = 0;
 }
 
-static int lock(struct lock *lock) {
+static int
+lock(struct lock *lock)
+{
   return pthread_mutex_lock(&lock->mutex);
 }
 
-static int unlock(struct lock *lock) {
+static int
+unlock(struct lock *lock)
+{
   return pthread_mutex_unlock(&lock->mutex);
 }
 
-static int wait_lock(struct lock *lock) {
+static int
+wait_lock(struct lock *lock)
+{
   return pthread_cond_wait(&lock->cond, &lock->mutex);
 }
 
-static int broadcast(struct lock *lock) {
+static int
+broadcast(struct lock *lock)
+{
   return pthread_cond_broadcast(&lock->cond);
 }
 
-// Buffer pools and helpers
+// Buffer pool helpers
 
 struct buffer_pool {
   struct lock lock;
@@ -135,17 +157,24 @@ static struct buffer_pool in_pool;
 static struct buffer_pool out_pool;
 static struct buffer_pool dict_pool;
 
-static struct buffer *get_buffer(struct buffer_pool *pool) {
+static struct buffer
+*get_buffer(struct buffer_pool *pool)
+{
   struct buffer *result;
   lock(&pool->lock);
   // wait until you can create a new buffer or grab an existing one
   while (pool->num_buffers == 0) {
     wait_lock(&pool->lock);
   }
-  
+
+  pool->num_buffers--;
   if (pool->head == NULL) {
+    unlock(&pool->lock);
     // allocate a new buffer
     result = malloc(sizeof(struct buffer));
+    if (result == NULL) {
+      return NULL;
+    }
     init_lock(&result->lock);
     result->data = malloc(pool->buffer_size);
     result->size = pool->buffer_size;
@@ -154,14 +183,15 @@ static struct buffer *get_buffer(struct buffer_pool *pool) {
   } else {
     result = pool->head;
     pool->head = pool->head->next;
+    unlock(&pool->lock);
   }
-
-  pool->num_buffers--;
-  unlock(&pool->lock);
+  
   return result;
 }
 
-static void return_buffer(struct buffer *buffer) {
+static void
+return_buffer(struct buffer *buffer)
+{
   struct buffer_pool *pool = buffer->pool;
   buffer->len = 0;
 
@@ -173,7 +203,9 @@ static void return_buffer(struct buffer *buffer) {
   unlock(&pool->lock);
 }
 
-static inline size_t grow(size_t size) {
+static inline size_t
+grow(size_t size)
+{
   size_t was = size;
   size_t top;
   int shift;
@@ -195,7 +227,9 @@ static inline size_t grow(size_t size) {
   return size;
 }
 
-static void grow_buffer(struct buffer *buffer) {
+static void
+grow_buffer(struct buffer *buffer)
+{
   unsigned char *tmp;
   size_t bigger = grow(buffer->size);
   tmp = realloc(buffer->data, bigger);
@@ -205,7 +239,7 @@ static void grow_buffer(struct buffer *buffer) {
   }
 }
 
-// Jobs and helpers
+// Job helpers
 
 struct job_list {
   struct lock lock;
@@ -228,13 +262,18 @@ static struct job_list compress_jobs;
 static struct job_list write_jobs;
 static struct job_list free_jobs;
 
-static struct job *get_job(long seq) {
+static struct job
+*get_job(long seq)
+{
   struct job* result;
   lock(&free_jobs.lock);
   if (free_jobs.head == NULL) {
     unlock(&free_jobs.lock);
     // allocate a new job
     result = malloc(sizeof(struct job));
+    if (result == NULL) {
+      return NULL;
+    }
     init_lock(&result->check_done);
   } else {
     // grab one from the list
@@ -245,11 +284,12 @@ static struct job *get_job(long seq) {
   lock(&result->check_done);
   result->next = NULL;
   result->seq = seq;
-  result->in = get_buffer(&in_pool);
   return result;
 }
 
-static void return_job(struct job *job) {
+static void
+return_job(struct job *job)
+{
   lock(&free_jobs.lock);
   job->next = free_jobs.head;
   free_jobs.head = job;
@@ -259,11 +299,13 @@ static void return_job(struct job *job) {
 
 // init functions
 
-static void init_pools(void) {
+static void
+init_pools(void)
+{
   // input pool
   init_lock(&in_pool.lock);
   in_pool.head = NULL;
-  in_pool.buffer_size = IN_BUF_SIZE;
+  in_pool.buffer_size = rsync ? CHUNK : IN_BUF_SIZE;
   in_pool.num_buffers = threads * 2 + 1;
 
   // output pool
@@ -279,7 +321,9 @@ static void init_pools(void) {
   dict_pool.num_buffers = -1;
 }
 
-static void init_jobs(void) {
+static void
+init_jobs(void)
+{
   // compress jobs
   init_lock(&compress_jobs.lock);
   compress_jobs.head = NULL;
@@ -297,7 +341,10 @@ static void init_jobs(void) {
 }
 
 // compress function
-static void deflate_buffer(z_stream *stream, struct buffer *out, int flush) {
+
+static void
+deflate_buffer(z_stream *stream, struct buffer *out, int flush)
+{
   size_t room;
 
   do {
@@ -315,7 +362,9 @@ static void deflate_buffer(z_stream *stream, struct buffer *out, int flush) {
 
 // crc math functions (thanks adler)
 
-__attribute__((pure)) static unsigned long gf2_matrix_times(unsigned long *mat, unsigned long vec) {
+__attribute__((pure)) static unsigned long
+gf2_matrix_times(unsigned long *mat, unsigned long vec)
+{
     unsigned long sum;
 
     sum = 0;
@@ -328,15 +377,18 @@ __attribute__((pure)) static unsigned long gf2_matrix_times(unsigned long *mat, 
     return sum;
 }
 
-static void gf2_matrix_square(unsigned long *square, unsigned long *mat) {
+static void
+gf2_matrix_square(unsigned long *square, unsigned long *mat)
+{
     int n;
 
     for (n = 0; n < 32; n++)
         square[n] = gf2_matrix_times(mat, mat[n]);
 }
 
-__attribute__((const)) static unsigned long crc32_comb(unsigned long crc1, unsigned long crc2,
-				size_t len2) {
+__attribute__((const)) static unsigned long
+crc32_comb(unsigned long crc1, unsigned long crc2, size_t len2)
+{
     int n;
     unsigned long row;
     unsigned long even[32];     // even-power-of-two zeros operator
@@ -387,8 +439,9 @@ __attribute__((const)) static unsigned long crc32_comb(unsigned long crc1, unsig
     return crc1;
 }
 
-static unsigned long crc32z(unsigned long crc,
-                           unsigned char const *buf, size_t len) {
+static unsigned long
+crc32z(unsigned long crc, unsigned char const *buf, size_t len)
+{
     while (len > UINT_MAX && buf != NULL) {
         crc = crc32(crc, buf, UINT_MAX);
         buf += UINT_MAX;
@@ -399,7 +452,9 @@ static unsigned long crc32z(unsigned long crc,
 
 // thread functions
 
-static noreturn void *write_thread(void* nothing) {
+static noreturn void
+*write_thread(void* nothing)
+{
   unsigned long check = crc32z(0L, Z_NULL, 0);
 
   // write the header
@@ -443,10 +498,8 @@ static noreturn void *write_thread(void* nothing) {
     // wait for checksum
     lock(&job->check_done);
     // assemble the checksum
-    check = crc32_comb(check, job->check, job->check_done.value);
-    
+    check = crc32_comb(check, job->check, job->check_done.value);  
     ulen += job->check_done.value;
-    
     unlock(&job->check_done);
     // return the job
     return_job(job);
@@ -457,11 +510,12 @@ static noreturn void *write_thread(void* nothing) {
   // write the trailer
   struct gzip_trailer trailer = create_trailer(check, ulen);
   writen(ofd, (unsigned char *)&trailer, sizeof(trailer));
-  
   pthread_exit(NULL);
 }
 
-static noreturn void *compress_thread(void* nothing) {
+static noreturn void
+*compress_thread(void* nothing)
+{
   struct job *job;
   size_t len;
 
@@ -489,8 +543,9 @@ static noreturn void *compress_thread(void* nothing) {
     compress_jobs.head = compress_jobs.head->next;
     unlock(&compress_jobs.lock);
     len = job->in->len;
-    // reset stream
+    // reset the stream
     deflateReset(&stream);
+    deflateParams(&stream, pack_level, Z_DEFAULT_STRATEGY);
     // set the dictionary
     if (job->dict != NULL) {
       deflateSetDictionary(&stream, job->dict->data, DICTIONARY_SIZE);
@@ -498,7 +553,9 @@ static noreturn void *compress_thread(void* nothing) {
       return_buffer(job->dict);
     }
     // get an out buffer
-    job->out = get_buffer(&out_pool);
+    do {
+      job->out = get_buffer(&out_pool);
+    } while (job->out == NULL);
     // set up stream struct
     stream.next_in = job->in->data;
     stream.next_out = job->out->data;
@@ -571,7 +628,9 @@ static noreturn void *compress_thread(void* nothing) {
   deflateEnd(&stream);
 }
 
-void parallel_zip(int pack_lev) {
+off_t
+parallel_zip(int pack_lev)
+{
   pack_level = pack_lev;
   init_pools();
   init_jobs();
@@ -581,19 +640,31 @@ void parallel_zip(int pack_lev) {
 
   // launch write thread
   pthread_t write_thread_t;
-  pthread_create(&write_thread_t, NULL, write_thread, NULL);
+  if (pthread_create(&write_thread_t, NULL, write_thread, NULL) != 0) {
+    return Z_ERRNO;
+  }
   
   // start reading
   int threads_compressing = 0;
   long seq = 0;
-  struct job *job;
-  size_t last_read;
+  struct job *job = NULL;
+  ssize_t last_read;
 
   // initial job
   struct job *last_job = get_job(seq);
+  if (last_job == NULL) {
+    return Z_ERRNO;
+  }
+  last_job->in = get_buffer(&in_pool);
+  if (last_job->in == NULL) {
+    return Z_ERRNO;
+  }
   seq++;
   //last_job->in->lock.value = 1;
-  last_read = readn(ifd, last_job->in->data, IN_BUF_SIZE);
+  last_read = readn(ifd, last_job->in->data, last_job->in->size);
+  if (last_read < 0) {
+    return Z_ERRNO;
+  }
   last_job->in->len = last_read;
   last_job->dict = NULL;
 
@@ -601,14 +672,24 @@ void parallel_zip(int pack_lev) {
   while(last_read != 0) {
     // get a job
     job = get_job(seq);
+    if (job == NULL) {
+      return Z_ERRNO;
+    }
+    job->in = get_buffer(&in_pool);
+    if (job->in == NULL) {
+      return Z_ERRNO;
+    }
     
     // read into it
-    last_read = readn(ifd, job->in->data, IN_BUF_SIZE);
+    last_read = readn(ifd, job->in->data, job->in->size);
+    if (last_read < 0) {
+      return Z_ERRNO;
+    }
     job->in->len = last_read;
     last_job->more = last_read;
 
     // set the dict and prepare the dict for the next one
-    if (last_job->in->len >= DICTIONARY_SIZE) {
+    if (!rsync && last_job->in->len >= DICTIONARY_SIZE) {
       job->dict = get_buffer(&dict_pool);
       memcpy(job->dict->data, last_job->in->data + last_job->in->len - DICTIONARY_SIZE, DICTIONARY_SIZE);
       job->dict->len = DICTIONARY_SIZE;
@@ -630,7 +711,10 @@ void parallel_zip(int pack_lev) {
     
     // launch a compress thread if possible
     if (threads_compressing < threads) {
-      pthread_create(compression_threads_t + threads_compressing, NULL, compress_thread, NULL);
+      int err = pthread_create(compression_threads_t + threads_compressing, NULL, compress_thread, NULL);
+      if (err != 0 && threads_compressing == 0) {
+	return Z_ERRNO;
+      }
       threads_compressing++;
     }
     
@@ -640,16 +724,22 @@ void parallel_zip(int pack_lev) {
   
   // call the threads home
   pthread_join(write_thread_t, NULL);
+  
   lock(&compress_jobs.lock);
   compress_jobs.lock.value = 1;
   broadcast(&compress_jobs.lock);
   unlock(&compress_jobs.lock);
+  
   for (int i = 0; i < threads_compressing; i++) {
     pthread_join(compression_threads_t[i], NULL);
   }
+
+  // return remaining resources
   return_buffer(last_job->in);
   return_job(last_job);
   if (last_job->dict != NULL) {
     return_buffer(last_job->dict);
   }
+
+  return Z_OK;
 }

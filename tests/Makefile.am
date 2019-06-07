@@ -23,6 +23,7 @@ TESTS =					\
   memcpy-abuse				\
   mixed					\
   null-suffix-clobber			\
+  parallel 				\
   reproducible				\
   stdin					\
   timestamp				\

@@ -5,6 +5,22 @@ GNU gzip NEWS                                    -*- outline -*-
 ** Performance improvements
 
   IBM Z platforms now support hardware-accelerated deflation.
+  Compression in parallel now supported with -j. The --rsyncable
+  option is also supported in behavior
+
+** Changes in behavior
+
+  Removal of support for the GZIP environment variable.
+  Removal of support for the LZA compression method (.lzh extension)
+  Removal of support for the LZW compression method produced by the unix
+   utility compress
+
+** Known bugs
+
+  Appending an uncompressed file onto a compressed file will correctly
+  decompress the compressed part of the file, but the uncompressed bytes
+  at the end of the file that were appended on will now be thrown out
+  without warning.
 
 
 * Noteworthy changes in release 1.10 (2018-12-29) [stable]

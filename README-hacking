@@ -41,6 +41,12 @@ and the CVS master copy:
 
 should output no difference.
 
+If you wish to check the speed of any changes that you make to gzip as related
+to older versions of gzip, you can run `make benchmarks' within gzip's benchmarks
+directory. This will test your gzip binary within src against other compression
+utilities and older gzips on a variety of file sizes. The variety of files
+currently used is quite minimal (.txt).
+
 Enjoy!
 
 -----

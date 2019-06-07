@@ -12,8 +12,8 @@ portable pkzip compatible archiver). The gzip format was however
 designed to accommodate several compression algorithms. See below
 for a comparison of zip and gzip.
 
-gunzip can currently decompress files created by gzip, compress or
-pack. The detection of the input format is automatic.  For the
+gunzip can currently decompress files created by gzip or pkzip.
+The detection of the input format is automatic.  For the
 gzip format, gunzip checks a 32 bit CRC. For pack, gunzip checks the
 uncompressed length.  The 'compress' format was not designed to allow
 consistency checks. However gunzip is sometimes able to detect a bad

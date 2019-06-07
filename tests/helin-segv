@@ -1,6 +1,6 @@
 #!/bin/sh
 # Before gzip-1.4, gzip -d would segfault on some inputs. Now, check that we
-# don't even process this data, because we don't support lzh, lzw
+# don't even process this data, because we don't support lzh, lzw.
 
 # Copyright (C) 2010-2019 Free Software Foundation, Inc.
 
@@ -20,7 +20,8 @@
 
 . "${srcdir=.}/init.sh"; path_prepend_ ..
 
-# This test case was provided by Aki Helin.
+# This test case was provided by Aki Helin and later modified to reflect
+# the new behavior of gzip by Will Fehrnstrom
 printf '\037\235\220\0\0\0\304' > helin.gz || framework_failure_
 
 fail=0

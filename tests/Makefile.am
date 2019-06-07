@@ -14,10 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-# Removed trailing-nul: at present not run because gzip no longer warns about
-# Removed mixed: at present not run because gzip no longer warns about
-# Trailing null bytes as of zlib integration. memcpy-abuse removed temporarily
-
 TESTS =					\
   helin-segv				\
   help-version				\
@@ -26,6 +22,9 @@ TESTS =					\
   list					\
   null-suffix-clobber			\
   parallel 				\
+	trailing-nul		\
+	mixed			\
+	memcpy-abuse	\
   reproducible				\
   stdin					\
   timestamp				\

@@ -41,8 +41,7 @@ off_t
 deflateGZIP (int pack_level)
 {
   if (threads > 0) {
-    parallel_zip(pack_level);
-    return Z_OK;
+    return parallel_zip(pack_level);
   }
   
     // source is input file descriptor, dest is input file descriptor

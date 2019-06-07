@@ -25,6 +25,7 @@ TESTS =					\
   keep					\
   list					\
   null-suffix-clobber			\
+  parallel 				\
   reproducible				\
   stdin					\
   timestamp				\

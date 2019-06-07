@@ -1,0 +1,82 @@
+#!/bin/sh
+# Exercise the -j THREADS option, with 1,2,4,8 threads tested.
+
+# Copyright (C) 2013-2019 Free Software Foundation, Inc.
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# limit so don't run it by default.
+
+# Copy a large file. configure script is a large file
+. "${srcdir=.}/init.sh"; path_prepend_ ..
+cp ../../configure in || framework_failure_
+cp in in_copy || frameworkd_failure_
+
+fail=0
+
+# test regular compression/decompression
+for i in {1,2,4,8}; do
+    gzip -j $i in || fail=1
+    gzip -d in.gz || fail=1
+    compare in in_copy || fail=1
+done
+
+# test stdin/stdout compression/decompression
+for i in {1,2,4,8}; do 
+    gzip -j $i < in > in.gz || fail=1
+    rm in
+    gzip -d < in.gz > in  || fail=1
+    compare in in_copy || fail=1
+    rm in.gz
+done
+
+# test test cat input/stdout compression/decompression
+for i in {1,2,4,8}; do 
+    cat in | gzip -j $i > in.gz || fail=1
+    rm in
+    cat in.gz | gzip -d > in  || fail=1
+    compare in in_copy || fail=1
+    rm in.gz
+done
+
+# create new file, that is very small.
+rm in incopy
+echo "parallel" > in
+cp in in_copy
+
+# test regular compression/decompression
+for i in {1,2,4,8}; do
+    gzip -j $i in || fail=1
+    gzip -d in.gz || fail=1
+    compare in in_copy || fail=1
+done
+
+# test stdin/stdout compression/decompression
+for i in {1,2,4,8}; do 
+    gzip -j $i < in > in.gz || fail=1
+    rm in
+    gzip -d < in.gz > in  || fail=1
+    compare in in_copy || fail=1
+    rm in.gz
+done
+
+# test test cat input/stdout compression/decompression
+for i in {1,2,4,8}; do 
+    cat in | gzip -j $i > in.gz || fail=1
+    rm in
+    cat in.gz | gzip -d > in  || fail=1
+    compare in in_copy || fail=1
+    rm in.gz
+done
+
+Exit $fail

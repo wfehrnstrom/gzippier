@@ -41,26 +41,26 @@
 #define CHUNK 16384
 
 /* PKZIP header definitions */
-#define LOCSIG 0x04034b50L      /* four-byte lead-in (lsb first) */
-#define LOCFLG 6                /* offset of bit flag */
-#define  CRPFLG 1               /*  bit for encrypted entry */
-#define  EXTFLG 8               /*  bit for extended local header */
-#define LOCHOW 8                /* offset of compression method */
+#define LOCSIG 0x04034b50L	/* four-byte lead-in (lsb first) */
+#define LOCFLG 6		/* offset of bit flag */
+#define  CRPFLG 1		/*  bit for encrypted entry */
+#define  EXTFLG 8		/*  bit for extended local header */
+#define LOCHOW 8		/* offset of compression method */
 /* #define LOCTIM 10               UNUSED file mod time (for decryption) */
-#define LOCCRC 14               /* offset of crc */
+#define LOCCRC 14		/* offset of crc */
 /* #define LOCSIZ 18               UNUSED offset of compressed size */
 /* #define LOCLEN 22               UNUSED offset of uncompressed length */
-#define LOCFIL 26               /* offset of file name field length */
-#define LOCEXT 28               /* offset of extra field length */
-#define LOCHDR 30               /* size of local header, including sig */
+#define LOCFIL 26		/* offset of file name field length */
+#define LOCEXT 28		/* offset of extra field length */
+#define LOCHDR 30		/* size of local header, including sig */
 /* #define EXTHDR 16               UNUSED size of extended local header,
                                    inc sig */
 /* #define RAND_HEAD_LEN  12       UNUSED length of encryption random header */
 
 /* Globals */
 
-static int decrypt;        /* flag to turn on decryption */
-static int ext_header = 0; /* set if extended local header */
+static int decrypt;		/* flag to turn on decryption */
+static int ext_header = 0;	/* set if extended local header */
 
 /* ===========================================================================
  * Check zip file and advance inptr to the start of the compressed data.
@@ -69,17 +69,17 @@ static int ext_header = 0; /* set if extended local header */
 int
 check_zipfile (int in)
 {
-  uch *h = inbuf + inptr; /* first local header */
+  uch *h = inbuf + inptr;	/* first local header */
 
   ifd = in;
 
   /* Check validity of local header, and skip name and extra fields */
-  inptr += LOCHDR + SH(h + LOCFIL) + SH(h + LOCEXT);
+  inptr += LOCHDR + SH (h + LOCFIL) + SH (h + LOCEXT);
 
-  if (inptr > insize || LG(h) != LOCSIG)
+  if (inptr > insize || LG (h) != LOCSIG)
     {
       fprintf (stderr, "\n%s: %s: not a valid zip file\n",
-               program_name, ifname);
+	       program_name, ifname);
       exit_code = ERROR;
       return ERROR;
     }
@@ -87,8 +87,8 @@ check_zipfile (int in)
   if (method != STORED && method != DEFLATED)
     {
       fprintf (stderr,
-               "\n%s: %s: first entry not deflated or stored -- use unzip\n",
-               program_name, ifname);
+	       "\n%s: %s: first entry not deflated or stored -- use unzip\n",
+	       program_name, ifname);
       exit_code = ERROR;
       return ERROR;
     }
@@ -97,7 +97,7 @@ check_zipfile (int in)
   if ((decrypt = h[LOCFLG] & CRPFLG) != 0)
     {
       fprintf (stderr, "\n%s: %s: encrypted file -- use unzip\n",
-               program_name, ifname);
+	       program_name, ifname);
       exit_code = ERROR;
       return ERROR;
     }
@@ -115,123 +115,136 @@ check_zipfile (int in)
  * This function assumes that check_zipfile has already been run, and that inptr
  * points to the start of the data.
  */
-int 
+int
 inflatePKZIP (void)
 {
-    int ret;
-    unsigned writtenOutBytes;
-    z_stream strm;
-    unsigned char in[CHUNK];
-    unsigned char out[CHUNK];
-    int source = ifd; // set to global input fd
-    int dest = ofd; // set to global output fd
-    bool read_prev = false;
-    int bytes_to_read = CHUNK;
+  int ret;
+  unsigned writtenOutBytes;
+  z_stream strm;
+  unsigned char in[CHUNK];
+  unsigned char out[CHUNK];
+  int source = ifd;		// set to global input fd
+  int dest = ofd;		// set to global output fd
+  bool read_prev = false;
+  int bytes_to_read = CHUNK;
 
-    memzero(in, CHUNK);
-    memzero(out, CHUNK);
+  memzero (in, CHUNK);
+  memzero (out, CHUNK);
 
-    // get crc32 from header
-    uLong original_crc = crc32(0L, Z_NULL, 0);
-    // offset by 14 bytes into inbuf, copy 4 bytes
-    memcpy(&original_crc, inbuf + LOCCRC, 4); 
-    uLong crc = crc32(0L, Z_NULL, 0);
+  // get crc32 from header
+  uLong original_crc = crc32 (0L, Z_NULL, 0);
+  // offset by 14 bytes into inbuf, copy 4 bytes
+  memcpy (&original_crc, inbuf + LOCCRC, 4);
+  uLong crc = crc32 (0L, Z_NULL, 0);
 
-    // assumes that check_zipfile incremented inptr to the first data value.
-    if ((insize - inptr) > 0)
-      {
-          memmove ((char *) in, (char *)(inbuf + inptr), insize - inptr);
-          bytes_to_read -= (insize - inptr);
-          read_prev = true;
-      }
+  // assumes that check_zipfile incremented inptr to the first data value.
+  if ((insize - inptr) > 0)
+    {
+      memmove ((char *) in, (char *) (inbuf + inptr), insize - inptr);
+      bytes_to_read -= (insize - inptr);
+      read_prev = true;
+    }
 
-    /* allocate inflate state */
-    strm.zalloc = Z_NULL;
-    strm.zfree = Z_NULL;
-    strm.opaque = Z_NULL;
-    strm.avail_in = 0;
-    strm.next_in = Z_NULL;
-    ret = inflateInit2(&strm, -15); // -15 sets for raw deflate, no headers.
-    if (ret != Z_OK)
-        return ret;
+  /* allocate inflate state */
+  strm.zalloc = Z_NULL;
+  strm.zfree = Z_NULL;
+  strm.opaque = Z_NULL;
+  strm.avail_in = 0;
+  strm.next_in = Z_NULL;
+  ret = inflateInit2 (&strm, -15);	// -15 sets for raw deflate, no headers.
+  if (ret != Z_OK)
+    return ret;
 
-    /* decompress until deflate stream ends or end of file */
-    do {
-        int read_in;
-        if (read_prev) {
-            read_in = read(source, in + (insize-inptr), bytes_to_read);
-        } else {
-            read_in = read(source, in, CHUNK);
-        }
-        if (read_in < 0)
-          {
-            (void)inflateEnd(&strm);
-            return Z_ERRNO;
-          }
-        else
-          {
-            if (read_prev) {
-                strm.avail_in = read_in + (insize-inptr);
-                read_prev = false;
-            } else {
-                strm.avail_in = read_in;
-            }
-          }
-        if (strm.avail_in == 0) {
-          break;
-        }
-        strm.next_in = in;
+  /* decompress until deflate stream ends or end of file */
+  do
+    {
+      int read_in;
+      if (read_prev)
+	{
+	  read_in = read (source, in + (insize - inptr), bytes_to_read);
+	}
+      else
+	{
+	  read_in = read (source, in, CHUNK);
+	}
+      if (read_in < 0)
+	{
+	  (void) inflateEnd (&strm);
+	  return Z_ERRNO;
+	}
+      else
+	{
+	  if (read_prev)
+	    {
+	      strm.avail_in = read_in + (insize - inptr);
+	      read_prev = false;
+	    }
+	  else
+	    {
+	      strm.avail_in = read_in;
+	    }
+	}
+      if (strm.avail_in == 0)
+	{
+	  break;
+	}
+      strm.next_in = in;
 
-        /* run inflate() on input until output buffer not full */
-        do {
-            strm.avail_out = CHUNK;
-            strm.next_out = out;
-            ret = inflate(&strm, Z_NO_FLUSH);
-            /* We need this line for a nasty side effect:
-             * inptr must be set to the end of the input buffer for
-             * input_eof to recognize that
-             * we've processed all of the gzipped input.
-             * TODO: remove this side effect dependent code by removing
-             * branching on inptr.
-             */
-            inptr = strm.total_in;
-            assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
-            switch (ret) {
-              case Z_NEED_DICT:
-                  ret = Z_DATA_ERROR;     /* and fall through */
-                  FALLTHROUGH;
-              case Z_DATA_ERROR:
-              case Z_MEM_ERROR:
-                  (void)inflateEnd(&strm);
-                  return ret;
-            }
-            writtenOutBytes = CHUNK - strm.avail_out;
+      /* run inflate() on input until output buffer not full */
+      do
+	{
+	  strm.avail_out = CHUNK;
+	  strm.next_out = out;
+	  ret = inflate (&strm, Z_NO_FLUSH);
+	  /* We need this line for a nasty side effect:
+	   * inptr must be set to the end of the input buffer for
+	   * input_eof to recognize that
+	   * we've processed all of the gzipped input.
+	   * TODO: remove this side effect dependent code by removing
+	   * branching on inptr.
+	   */
+	  inptr = strm.total_in;
+	  assert (ret != Z_STREAM_ERROR);	/* state not clobbered */
+	  switch (ret)
+	    {
+	    case Z_NEED_DICT:
+	      ret = Z_DATA_ERROR;	/* and fall through */
+	      FALLTHROUGH;
+	    case Z_DATA_ERROR:
+	    case Z_MEM_ERROR:
+	      (void) inflateEnd (&strm);
+	      return ret;
+	    }
+	  writtenOutBytes = CHUNK - strm.avail_out;
 
-            uLong new_crc = crc32(0L, Z_NULL, 0);
-            new_crc = crc32_z(new_crc, out, writtenOutBytes);
-            crc = crc32_combine(crc, new_crc, writtenOutBytes);
+	  uLong new_crc = crc32 (0L, Z_NULL, 0);
+	  new_crc = crc32_z (new_crc, out, writtenOutBytes);
+	  crc = crc32_combine (crc, new_crc, writtenOutBytes);
 
-            int bytes_written = write(dest, out, writtenOutBytes);
-            if (bytes_written != writtenOutBytes) {
-                (void)inflateEnd(&strm);
-                return Z_ERRNO;
-            }
-        }
+	  int bytes_written = write (dest, out, writtenOutBytes);
+	  if (bytes_written != writtenOutBytes)
+	    {
+	      (void) inflateEnd (&strm);
+	      return Z_ERRNO;
+	    }
+	}
       while (strm.avail_out == 0);
       /* done when inflate() says it's done */
     }
   while (ret != Z_STREAM_END);
   /* clean up and return */
   int end_ret = inflateEnd (&strm);
-  if (end_ret == Z_STREAM_ERROR) {
+  if (end_ret == Z_STREAM_ERROR)
+    {
       return Z_STREAM_ERROR;
-  }
+    }
   int result = ret == Z_STREAM_END ? Z_OK : Z_DATA_ERROR;
-  
+
   // CRC32 check
-  if (crc != original_crc) {
+  if (crc != original_crc)
+    {
       result = Z_DATA_ERROR;
-  }
+    }
   return result;
 }
 
@@ -240,106 +253,118 @@ inflatePKZIP (void)
 int
 inflateGZIP (void)
 {
-    int ret;
-    unsigned writtenOutBytes;
-    z_stream strm;
-    unsigned char in[CHUNK];
-    unsigned char out[CHUNK];
-    int source = ifd; // set to global input fd
-    int dest = ofd; // set to global output fd
-    bool read_prev = false;
-    int bytes_to_read = CHUNK;
+  int ret;
+  unsigned writtenOutBytes;
+  z_stream strm;
+  unsigned char in[CHUNK];
+  unsigned char out[CHUNK];
+  int source = ifd;		// set to global input fd
+  int dest = ofd;		// set to global output fd
+  bool read_prev = false;
+  int bytes_to_read = CHUNK;
 
-    memzero(in, CHUNK);
-    memzero(out, CHUNK);
+  memzero (in, CHUNK);
+  memzero (out, CHUNK);
 
-    if (insize > 0)
-      {
-          memmove ((char *) in, (char *)inbuf, insize);
-          bytes_to_read -= insize;
-          read_prev = true;
-      }
+  if (insize > 0)
+    {
+      memmove ((char *) in, (char *) inbuf, insize);
+      bytes_to_read -= insize;
+      read_prev = true;
+    }
 
-    /* allocate inflate state */
-    strm.zalloc = Z_NULL;
-    strm.zfree = Z_NULL;
-    strm.opaque = Z_NULL;
-    strm.avail_in = 0;
-    strm.next_in = Z_NULL;
-    ret = inflateInit2(&strm, MAX_WBITS + 16);
-    if (ret != Z_OK)
-        return ret;
-    
-    /* decompress until deflate stream ends or end of file */
-    do {
-        int read_in;
-        if (read_prev) {
-            read_in = read(source, in + insize, bytes_to_read);
-        } else {
-            read_in = read(source, in, CHUNK);
-        }
-        if (read_in < 0)
-          {
-            (void)inflateEnd(&strm);
-            return Z_ERRNO;
-          }
-        else
-          {
-            if (read_prev) {
-                strm.avail_in = read_in + insize;
-                read_prev = false;
-            } else {
-                strm.avail_in = read_in;
-            }
-          }
-        if (strm.avail_in == 0) {
-          break;
-        }
-        strm.next_in = in;
+  /* allocate inflate state */
+  strm.zalloc = Z_NULL;
+  strm.zfree = Z_NULL;
+  strm.opaque = Z_NULL;
+  strm.avail_in = 0;
+  strm.next_in = Z_NULL;
+  ret = inflateInit2 (&strm, MAX_WBITS + 16);
+  if (ret != Z_OK)
+    return ret;
 
-        /* run inflate() on input until output buffer not full */
-        do {
-            strm.avail_out = CHUNK;
-            strm.next_out = out;
-            ret = inflate(&strm, Z_NO_FLUSH);
-            /* We need this line for a nasty side effect:
-             * inptr must be set to the end of the input buffer for
-             * input_eof to recognize that
-             * we've processed all of the gzipped input.
-             * TODO: remove this side effect dependent code by removing
-             * branching on inptr.
-             * TODO: inflate internally discards garbage bytes not part of the
-             * compressed input. As of zlib integration, gzip no longer warns
-             * about the discarding of these bytes if they are nonzero.
-             * Previously, gzip did warn about the discarding of these bytes.
-             */
-            inptr = strm.total_in;
-            assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
-            switch (ret) {
-              case Z_NEED_DICT:
-                  ret = Z_DATA_ERROR;     /* and fall through */
-                  FALLTHROUGH;
-              case Z_DATA_ERROR:
-              case Z_MEM_ERROR:
-                  (void)inflateEnd(&strm);
-                  return ret;
-            }
-            writtenOutBytes = CHUNK - strm.avail_out;
-            int bytes_written = write(dest, out, writtenOutBytes);
-            if (bytes_written != writtenOutBytes) {
-                (void)inflateEnd(&strm);
-                return Z_ERRNO;
-            }
-        }
+  /* decompress until deflate stream ends or end of file */
+  do
+    {
+      int read_in;
+      if (read_prev)
+	{
+	  read_in = read (source, in + insize, bytes_to_read);
+	}
+      else
+	{
+	  read_in = read (source, in, CHUNK);
+	}
+      if (read_in < 0)
+	{
+	  (void) inflateEnd (&strm);
+	  return Z_ERRNO;
+	}
+      else
+	{
+	  if (read_prev)
+	    {
+	      strm.avail_in = read_in + insize;
+	      read_prev = false;
+	    }
+	  else
+	    {
+	      strm.avail_in = read_in;
+	    }
+	}
+      if (strm.avail_in == 0)
+	{
+	  break;
+	}
+      strm.next_in = in;
+
+      /* run inflate() on input until output buffer not full */
+      do
+	{
+	  strm.avail_out = CHUNK;
+	  strm.next_out = out;
+	  ret = inflate (&strm, Z_NO_FLUSH);
+	  /* We need this line for a nasty side effect:
+	   * inptr must be set to the end of the input buffer for
+	   * input_eof to recognize that
+	   * we've processed all of the gzipped input.
+	   * TODO: remove this side effect dependent code by removing
+	   * branching on inptr.
+	   * TODO: inflate internally discards garbage bytes not part of the
+	   * compressed input. As of zlib integration, gzip no longer warns
+	   * about the discarding of these bytes if they are nonzero.
+	   * Previously, gzip did warn about the discarding of these bytes.
+	   */
+	  inptr = strm.total_in;
+	  assert (ret != Z_STREAM_ERROR);	/* state not clobbered */
+	  switch (ret)
+	    {
+	    case Z_NEED_DICT:
+	      ret = Z_DATA_ERROR;	/* and fall through */
+	      FALLTHROUGH;
+	    case Z_DATA_ERROR:
+	    case Z_MEM_ERROR:
+	      (void) inflateEnd (&strm);
+	      return ret;
+	    }
+	  writtenOutBytes = CHUNK - strm.avail_out;
+	  int bytes_written = write (dest, out, writtenOutBytes);
+	  if (bytes_written != writtenOutBytes)
+	    {
+	      (void) inflateEnd (&strm);
+	      return Z_ERRNO;
+	    }
+	}
       while (strm.avail_out == 0);
       /* done when inflate() says it's done */
     }
   while (ret != Z_STREAM_END);
   /* clean up and return */
   int end_ret = inflateEnd (&strm);
-  if (end_ret == Z_STREAM_ERROR) {
+  if (end_ret == Z_STREAM_ERROR)
+    {
       return Z_STREAM_ERROR;
-  }
+    }
   int result = ret == Z_STREAM_END ? Z_OK : Z_DATA_ERROR;
   return result;
 }
@@ -362,32 +387,36 @@ unzip (int in, int out)
     {
       int res;
 
-      if (pkzip == 1) {
-        res = inflatePKZIP (); 
-      } else {
+      if (pkzip == 1)
+	{
+	  res = inflatePKZIP ();
+	}
+      else
+	{
 
 #ifdef IBM_Z_DFLTCC
-        res = dfltcc_inflate ();
+	  res = dfltcc_inflate ();
 #else
-        res = inflateGZIP ();
+	  res = inflateGZIP ();
 #endif
 
-      }
+	}
 
       if (res == 3)
-        {
-          xalloc_die ();
-        }
+	{
+	  xalloc_die ();
+	}
       else if (res != 0)
-        {
-          gzip_error ("invalid compressed data--format violated");
-        }
+	{
+	  gzip_error ("invalid compressed data--format violated");
+	}
 
-      if (pkzip == 1) {
-        pkzip = 0; // set for next file
-      }
+      if (pkzip == 1)
+	{
+	  pkzip = 0;		// set for next file
+	}
     }
-  else 
+  else
     {
       gzip_error ("internal error, invalid method");
     }

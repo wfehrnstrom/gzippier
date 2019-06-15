@@ -15,6 +15,9 @@
 /README-release
 /aclocal.m4
 /benchmarks/gzip-1.10
+/benchmarks/acl-resources.txt
+/benchmarks/MAINTAINERS
+/benchmarks/megabook
 /build-aux
 /config.status
 /configure

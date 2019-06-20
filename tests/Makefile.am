@@ -22,6 +22,7 @@ TESTS =					\
   list					\
   null-suffix-clobber			\
   parallel 				\
+  pkzip 				\
 	trailing-nul		\
 	mixed			\
 	memcpy-abuse	\

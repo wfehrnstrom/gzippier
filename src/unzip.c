@@ -48,14 +48,14 @@
 #define LOCHOW 8		/* offset of compression method */
 /* #define LOCTIM 10               UNUSED file mod time (for decryption) */
 #define LOCCRC 14		/* offset of crc */
-/* #define LOCSIZ 18               UNUSED offset of compressed size */
-/* #define LOCLEN 22               UNUSED offset of uncompressed length */
+#define LOCSIZ 18       /*        UNUSED offset of compressed size */
+#define LOCLEN 22       /*        UNUSED offset of uncompressed length */
 #define LOCFIL 26		/* offset of file name field length */
 #define LOCEXT 28		/* offset of extra field length */
 #define LOCHDR 30		/* size of local header, including sig */
 /* #define EXTHDR 16               UNUSED size of extended local header,
                                    inc sig */
-/* #define RAND_HEAD_LEN  12       UNUSED length of encryption random header */
+#define RAND_HEAD_LEN  12       /* UNUSED length of encryption random header */
 
 /* Globals */
 
@@ -412,11 +412,25 @@ unzip (int in, int out)
 	}
 
       if (pkzip == 1)
-	{
-	  pkzip = 0;		// set for next file
-	}
+	    {
+	        pkzip = 0;		// set for next file
+	    }
+    } 
+  else if (pkzip == 1 && method == STORED) {
+        register ulg n = LG(inbuf + LOCLEN);
+
+        if (n != LG(inbuf + LOCSIZ) - (decrypt ? RAND_HEAD_LEN : 0)) {
+
+            fprintf(stderr, "len %lu, siz %lu\n", n, LG(inbuf + LOCSIZ));
+            gzip_error ("invalid compressed data--length mismatch");
+        }
+        while (n--) {
+            uch c = (uch)get_byte();
+            put_ubyte(c);
+        }
+        flush_window();
     }
-  else
+  else 
     {
       gzip_error ("internal error, invalid method");
     }

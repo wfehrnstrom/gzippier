@@ -86,11 +86,11 @@ deflateGZIP (int pack_level)
         if (rsync == true)
           {
             // Very unsure about effectiveness of Z_FULL_FLUSH for rsyncabl
-            flush = (strm.avail_in != CHUNK) ? Z_FINISH : Z_FULL_FLUSH;
+            flush = (strm.avail_in == 0) ? Z_FINISH : Z_FULL_FLUSH;
           }
         else
           {
-            flush = (strm.avail_in != CHUNK) ? Z_FINISH : Z_NO_FLUSH;
+            flush = (strm.avail_in == 0) ? Z_FINISH : Z_NO_FLUSH;
           }
         strm.next_in = in;
 

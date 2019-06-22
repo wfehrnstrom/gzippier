@@ -400,7 +400,7 @@ __attribute__ ((pure))
   while (vec)
     {
       if (vec & 1)
-	sum ^= *mat;
+	      sum ^= *mat;
       vec >>= 1;
       mat++;
     }
@@ -745,37 +745,37 @@ parallel_zip (int pack_lev)
       // get a job
       job = get_job (seq);
       if (job == NULL)
-	{
-	  return Z_ERRNO;
-	}
+      	{
+      	  return Z_ERRNO;
+      	}
       job->in = get_buffer (&in_pool);
       if (job->in == NULL)
-	{
-	  return Z_ERRNO;
-	}
+      	{
+      	  return Z_ERRNO;
+      	}
 
       // read into it
       last_read = readn (ifd, job->in->data, job->in->size);
       if (last_read < 0)
-	{
-	  return Z_ERRNO;
-	}
+      	{
+      	  return Z_ERRNO;
+      	}
       job->in->len = last_read;
       last_job->more = last_read;
 
       // set the dict and prepare the dict for the next one
       if (!rsync && last_job->in->len >= DICTIONARY_SIZE)
-	{
-	  job->dict = get_buffer (&dict_pool);
-	  memcpy (job->dict->data,
-		  last_job->in->data + last_job->in->len - DICTIONARY_SIZE,
-		  DICTIONARY_SIZE);
-	  job->dict->len = DICTIONARY_SIZE;
-	}
+      	{
+      	  job->dict = get_buffer (&dict_pool);
+      	  memcpy (job->dict->data,
+      		  last_job->in->data + last_job->in->len - DICTIONARY_SIZE,
+      		  DICTIONARY_SIZE);
+      	  job->dict->len = DICTIONARY_SIZE;
+      	}
       else
-	{
-	  job->dict = NULL;
-	}
+      	{
+      	  job->dict = NULL;
+      	}
 
       // put the previous job on the back of the compress list
       lock (&compress_jobs.lock);

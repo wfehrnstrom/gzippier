@@ -17,9 +17,9 @@
 
 CLEANFILES =
 BUILT_SOURCES =
-DEBUG_FLAGS = -g -O0
+DEBUG_FLAGS = -g3 -O0
 AM_CPPFLAGS = -I$(top_srcdir)/lib/zlib
-AM_CFLAGS = $(WARN_CFLAGS) $(WERROR_CFLAGS) $(DEBUG_FLAGS)
+AM_CFLAGS = $(DEBUG_FLAGS) $(WARN_CFLAGS) $(WERROR_CFLAGS)
 
 # Tell the linker to omit references to unused shared libraries.
 AM_LDFLAGS = $(IGNORE_USED_LIBRARIES_CFLAGS) -pthread

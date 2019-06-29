@@ -72,7 +72,6 @@ static char const *const license_msg[] = {
 
 #include "intprops.h"
 #include "tailor.h"
-#include "revision.h"
 #include "timespec.h"
 
 #include "dirname.h"
@@ -190,7 +189,7 @@ int test = 0;			/* test .gz file integrity */
 static int foreground = 0;	/* set if program run in foreground */
 char *program_name;		/* program name */
 int method = DEFLATED;		/* compression method */
-int level = 6;			/* compression level */
+uint8_t level = 6;			/* compression level */
 int exit_code = OK;		/* program exit code */
 int save_orig_name;		/* set if original name must be saved */
 static int last_member;		/* set for .zip and .Z files */
@@ -307,7 +306,6 @@ static const struct option longopts[] = {
   {"version", 0, NULL, 'V'},	/* display version number */
   {"fast", 0, NULL, '1'},	/* compress faster */
   {"best", 0, NULL, '9'},	/* compress better */
-  {"lzw", 0, NULL, 'Z'},	/* make output compatible with old compress */
   {"bits", 1, NULL, 'b'},	/* max number of bits per code (implies -Z) */
   {"rsyncable", 0, NULL, RSYNCABLE_OPTION},	/* make rsync-friendly archive */
   {"parallel", 1, NULL, 'j'},	/* parallel compression */
@@ -599,6 +597,14 @@ main (int argc, char **argv)
 	case '8':
 	case '9':
 	  level = optc - '0';
+    if (level > 9)
+      {
+        level = 9;
+      }
+    else if (level < 1)
+      {
+        level = 1;
+      }
 	  break;
 	case 'j':
 	  threads = atoi (optarg);
@@ -719,7 +725,7 @@ get_input_size_and_time (void)
     {
       ifile_size = istat.st_size;
       if (!no_time || list)
-	time_stamp = get_stat_mtime (&istat);
+	     time_stamp = get_stat_mtime (&istat);
     }
 }
 
@@ -979,10 +985,10 @@ treat_file (char *iname)
     {
       method = get_method (ifd);	/* updates ofname if original given */
       if (method < 0)
-	{
-	  close (ifd);
-	  return;		/* error message already emitted */
-	}
+      	{
+      	  close (ifd);
+      	  return;		/* error message already emitted */
+      	}
     }
   if (list)
     {
@@ -1591,18 +1597,18 @@ set_gzip_time_stamp (ulg stamp, struct timespec *ts)
   if (stamp != 0 && !no_time)
     {
       if (stamp <= TYPE_MAXIMUM (time_t))
-	{
-	  time_stamp.tv_sec = stamp;
-	  time_stamp.tv_nsec = 0;
-	}
+      	{
+      	  time_stamp.tv_sec = stamp;
+      	  time_stamp.tv_nsec = 0;
+      	}
       else
-	{
-	  WARN ((stderr,
-		 "%s: %s: MTIME %lu out of range for this platform\n",
-		 program_name, ifname, stamp));
-	  time_stamp.tv_sec = TYPE_MAXIMUM (time_t);
-	  time_stamp.tv_nsec = TIMESPEC_RESOLUTION - 1;
-	}
+      	{
+      	  WARN ((stderr,
+      		 "%s: %s: MTIME %lu out of range for this platform\n",
+      		 program_name, ifname, stamp));
+      	  time_stamp.tv_sec = TYPE_MAXIMUM (time_t);
+      	  time_stamp.tv_nsec = TIMESPEC_RESOLUTION - 1;
+      	}
     }
 }
 
@@ -1767,29 +1773,29 @@ get_method (int in)
 
       method = (int) get_byte ();
       if (method != DEFLATED)
-	{
-	  FREE (h);
-	  return unknown_decompression_method_error ();
-	}
+      	{
+      	  FREE (h);
+      	  return unknown_decompression_method_error ();
+      	}
 
       work = unzip;
       h->flags = (uch) get_byte ();
 
       if (bitmap_contains (h->flags, ENCRYPTED))
-	{
-	  FREE (h);
-	  return encrypted_file_error ();
-	}
+      	{
+      	  FREE (h);
+      	  return encrypted_file_error ();
+      	}
 
       if (bitmap_contains (h->flags, RESERVED))
-	{
-	  int no_continue = reserved_flags_used_error (h->flags);
-	  if (no_continue != 0)
-	    {
-	      FREE (h);
-	      return no_continue;
-	    }
-	}
+      	{
+      	  int no_continue = reserved_flags_used_error (h->flags);
+      	  if (no_continue != 0)
+      	    {
+      	      FREE (h);
+      	      return no_continue;
+      	    }
+      	}
 
       ulg read_time_stamp = read_time_stamp_from_file ();
       set_gzip_time_stamp (read_time_stamp, &time_stamp);
@@ -1797,57 +1803,57 @@ get_method (int in)
       set_magic_header_data (h, read_time_stamp);
 
       if (bitmap_contains (h->flags, EXTRA_FIELD))
-	{
-	  discard_extra_header_fields (h->flags);
-	}
+      	{
+      	  discard_extra_header_fields (h->flags);
+      	}
 
       /* Get original file name if it was truncated */
       if (bitmap_contains (h->flags, ORIG_NAME))
-	{
-	  if (no_name || (to_stdout && !list) || part_nb > 1)
-	    {
-	      /* Discard the old name */
-	      discard_input_bytes (-1, h->flags);
-	    }
-	  else
-	    {
-	      /* Copy the base name. Keep a directory prefix intact. */
-	      char *base = gzip_base_name (ofname);
-	      char *base_end = str_end (base, watch_file_name_length);
-	      if (bitmap_contains (h->flags, HEADER_CRC))
-		updcrc ((uch *) base, base_end - base);
-	      base_end = gzip_base_name (base);
-	      memmove (base, base_end, strlen (base_end) + 1);
-	      /* If necessary, adapt the name to local OS conventions: */
-	      if (!list)
-		{
-		  MAKE_LEGAL_NAME (base);
-		  if (base)
-		    list = 0;	/* avoid warning about unused variable */
-		}
-	    }			/* no_name || to_stdout */
-	}			/* ORIG_NAME */
+      	{
+      	  if (no_name || (to_stdout && !list) || part_nb > 1)
+      	    {
+      	      /* Discard the old name */
+      	      discard_input_bytes (-1, h->flags);
+      	    }
+      	  else
+      	    {
+      	      /* Copy the base name. Keep a directory prefix intact. */
+      	      char *base = gzip_base_name (ofname);
+      	      char *base_end = str_end (base, watch_file_name_length);
+      	      if (bitmap_contains (h->flags, HEADER_CRC))
+      	        updcrc ((uch *) base, base_end - base);
+      	      base_end = gzip_base_name (base);
+      	      memmove (base, base_end, strlen (base_end) + 1);
+      	      /* If necessary, adapt the name to local OS conventions: */
+      	      if (!list)
+            		{
+            		  MAKE_LEGAL_NAME (base);
+            		  if (base)
+            		    list = 0;	/* avoid warning about unused variable */
+            		}
+      	    }			/* no_name || to_stdout */
+      	}			/* ORIG_NAME */
 
       /* Discard file comment if any */
       if (bitmap_contains (h->flags, COMMENT))
-	{
-	  discard_input_bytes (-1, h->flags);
-	}
+      	{
+      	  discard_input_bytes (-1, h->flags);
+      	}
 
       if (bitmap_contains (h->flags, HEADER_CRC))
-	{
-	  int crc_check_res = crc_header_check (h->magic);
-	  if (crc_check_res != 0)
-	    {
-	      FREE (h);
-	      return crc_check_res;
-	    }
-	}
+      	{
+      	  int crc_check_res = crc_header_check (h->magic);
+      	  if (crc_check_res != 0)
+      	    {
+      	      FREE (h);
+      	      return crc_check_res;
+      	    }
+      	}
 
       if (part_nb == 1)
-	{
-	  header_bytes = inptr + 2 * 4;	/* include crc and size */
-	}
+      	{
+      	  header_bytes = inptr + 2 * 4;	/* include crc and size */
+      	}
 
     }
   else if (is_pkzip_format (h, inptr, inbuf))

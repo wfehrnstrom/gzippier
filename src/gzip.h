@@ -36,6 +36,7 @@
  */
 #include <stdio.h>
 #include <sys/types.h> /* for off_t */
+#include <stdint.h>
 #include <time.h>
 #include <string.h>
 #include <stdnoreturn.h>
@@ -201,12 +202,12 @@ typedef int file_t;     /* Do not use stdio */
 extern int exit_code;      /* program exit code */
 extern int verbose;        /* be verbose (-v) */
 extern int quiet;          /* be quiet (-q) */
-extern int level;          /* compression level */
+extern uint8_t level;          /* compression level */
 extern int test;           /* check .z file integrity */
 extern int to_stdout;      /* output to stdout (-c) */
 extern int save_orig_name; /* set if original name must be saved */
 extern int no_name;        /* original name should not be restored */
-extern int pkzip;          /* global variable for pkzip */ 
+extern int pkzip;          /* global variable for pkzip */
 
 #define get_byte()  (inptr < insize ? inbuf[inptr++] : fill_inbuf(false, CHUNK))
 #define try_byte()  (inptr < insize ? inbuf[inptr++] : fill_inbuf(true, CHUNK))

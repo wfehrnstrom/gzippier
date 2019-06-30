@@ -262,62 +262,60 @@ inflateGZIP (void)
   int dest = ofd;		// set to global output fd
   bool read_prev = false;
   int bytes_to_read = CHUNK;
+  unsigned total_in;
+  int read_in; 
+
 
   memzero (in, CHUNK);
   memzero (out, CHUNK);
 
-  if (insize > 0)
-    {
-      memmove ((char *) in, (char *) inbuf, insize);
-      bytes_to_read -= insize;
-      read_prev = true;
-    }
+  // create testing crc
+  uLong crc = crc32 (0L, Z_NULL, 0);
 
+  // assumes that inptr is pointing to the first data value in inbuf
+  if ((insize - inptr) > 0)
+    {
+        memmove ((char *) in, (char *) (inbuf + inptr), insize - inptr);
+        bytes_to_read -= (insize - inptr);
+        read_prev = true;
+    }
+  
   /* allocate inflate state */
   strm.zalloc = Z_NULL;
   strm.zfree = Z_NULL;
   strm.opaque = Z_NULL;
   strm.avail_in = 0;
   strm.next_in = Z_NULL;
-  ret = inflateInit2 (&strm, MAX_WBITS + 16);
-  if (ret != Z_OK)
-    return ret;
+  ret = inflateInit2 (&strm, -15);	// -15 sets for raw deflate, no headers.
+  if (ret != Z_OK) {
+      return ret;
+  }
 
-  /* decompress until deflate stream ends or end of file */
   do
     {
-      int read_in;
-      if (read_prev)
-	{
-	  read_in = read (source, in + insize, bytes_to_read);
-	}
-      else
-	{
-	  read_in = read (source, in, CHUNK);
-	}
-      if (read_in < 0)
-	{
-	  (void) inflateEnd (&strm);
-	  return Z_ERRNO;
-	}
-      else
-	{
-	  if (read_prev)
-	    {
-	      strm.avail_in = read_in + insize;
-	      read_prev = false;
-	    }
-	  else
-	    {
-	      strm.avail_in = read_in;
-	    }
-	}
-      if (strm.avail_in == 0)
-	{
-	  break;
-	}
-      strm.next_in = in;
+        if (read_prev) {
+            read_in = read (source, in + (insize - inptr), bytes_to_read);
+        } else {
+            read_in = read (source, in, CHUNK);
+        }
 
+        if (read_in < 0) {
+            (void) inflateEnd (&strm);
+            return Z_ERRNO; 
+        } else {
+            if (read_prev) {
+                read_in = read_in + (insize - inptr);
+                strm.avail_in = read_in;
+                read_prev = false;
+            } else {
+                strm.avail_in = read_in;
+            }
+        }
+
+        if (strm.avail_in == 0) {
+            break;
+        }
+        strm.next_in = in;
       /* run inflate() on input until output buffer not full */
       do
 	{
@@ -330,12 +328,8 @@ inflateGZIP (void)
 	   * we've processed all of the gzipped input.
 	   * TODO: remove this side effect dependent code by removing
 	   * branching on inptr.
-	   * TODO: inflate internally discards garbage bytes not part of the
-	   * compressed input. As of zlib integration, gzip no longer warns
-	   * about the discarding of these bytes if they are nonzero.
-	   * Previously, gzip did warn about the discarding of these bytes.
 	   */
-	  inptr = strm.total_in;
+	  total_in = strm.total_in;
 	  assert (ret != Z_STREAM_ERROR);	/* state not clobbered */
 	  switch (ret)
 	    {
@@ -348,24 +342,41 @@ inflateGZIP (void)
 	      return ret;
 	    }
 	  writtenOutBytes = CHUNK - strm.avail_out;
-	  int bytes_written = write (dest, out, writtenOutBytes);
-	  if (bytes_written != writtenOutBytes)
-	    {
-	      (void) inflateEnd (&strm);
-	      return Z_ERRNO;
-	    }
-	}
-      while (strm.avail_out == 0);
-      /* done when inflate() says it's done */
-    }
-  while (ret != Z_STREAM_END);
-  /* clean up and return */
-  int end_ret = inflateEnd (&strm);
-  if (end_ret == Z_STREAM_ERROR)
-    {
-      return Z_STREAM_ERROR;
-    }
+
+	  uLong new_crc = crc32 (0L, Z_NULL, 0);
+	  new_crc = crc32_z (new_crc, out, writtenOutBytes);
+	  crc = crc32_combine (crc, new_crc, writtenOutBytes);
+
+      int bytes_written = write (dest, out, writtenOutBytes);
+      if (bytes_written != writtenOutBytes) {
+          (void) inflateEnd (&strm);
+          return Z_ERRNO;
+      }
+      
+    } while (strm.avail_out == 0);
+  } while (ret != Z_STREAM_END);
+
+  inptr += total_in;
   int result = ret == Z_STREAM_END ? Z_OK : Z_DATA_ERROR;
+  
+   /* printf("strm.avail_in: %d\n", strm.avail_in); */ 
+
+  // get crc32 from footer
+  uLong original_crc = crc32 (0L, Z_NULL, 0);
+  uLong original_len;
+  memcpy (&original_crc, in + (read_in - strm.avail_in), 4); // 4 bytes of crc
+  memcpy (&original_len, in + (read_in - strm.avail_in) + 4, 4); // 4 bytes of len, offset by 4
+
+  if (crc != original_crc) 
+    {
+        result = Z_DATA_ERROR;
+    }
+
+  // Length check
+  if (strm.total_out != original_len) {
+      result = Z_DATA_ERROR;
+  }
+
   return result;
 }
 

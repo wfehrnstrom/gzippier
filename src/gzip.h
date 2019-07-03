@@ -199,6 +199,64 @@ typedef int file_t;     /* Do not use stdio */
 #define CHUNK 16384
 /* zlib deflate and inflate chunk size. See zlib docs for more details */
 
+/* Common defaults */
+#ifndef OS_CODE
+#  define OS_CODE  0x03  /* assume Unix */
+#endif
+
+#ifndef SIGPIPE
+# define SIGPIPE 0
+#endif
+
+#ifndef casemap
+#  define casemap(c) (c)
+#endif
+
+#ifndef OPTIONS_VAR
+#  define OPTIONS_VAR "GZIP"
+#endif
+
+#ifndef Z_SUFFIX
+#  define Z_SUFFIX ".gz"
+#endif
+
+#ifdef MAX_EXT_CHARS
+#  define MAX_SUFFIX  MAX_EXT_CHARS
+#else
+#  define MAX_SUFFIX  30
+#endif
+
+#ifndef MAKE_LEGAL_NAME
+#  ifdef NO_MULTIPLE_DOTS
+#    define MAKE_LEGAL_NAME(name)   make_simple_name(name)
+#  else
+#    define MAKE_LEGAL_NAME(name)
+#  endif
+#endif
+
+#ifndef MIN_PART
+#  define MIN_PART 3
+   /* keep at least MIN_PART chars between dots in a file name. */
+#endif
+
+#ifndef EXPAND
+#  define EXPAND(argc,argv)
+#endif
+
+#ifndef SET_BINARY_MODE
+#  define SET_BINARY_MODE(fd)
+#endif
+
+// try to get rid of it.
+
+#ifndef FALLTHROUGH
+# if __GNUC__ < 7
+#  define FALLTHROUGH ((void) 0)
+# else
+#  define FALLTHROUGH __attribute__ ((__fallthrough__))
+# endif
+#endif
+
 extern int exit_code;      /* program exit code */
 extern int verbose;        /* be verbose (-v) */
 extern int quiet;          /* be quiet (-q) */

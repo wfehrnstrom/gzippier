@@ -564,10 +564,7 @@ write_error ()
  * Display compression ratio on the given stream on 6 characters.
  */
 void
-display_ratio (num, den, file)
-     off_t num;
-     off_t den;
-     FILE *file;
+display_ratio (off_t num, off_t den, FILE *file)
 {
   fprintf (file, "%5.1f%%", den == 0 ? 0 : 100.0 * num / den);
 }

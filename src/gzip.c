@@ -334,13 +334,17 @@ static void remove_output_file (bool);
 static void abort_gzip_signal (int);
 static noreturn void do_exit (int exitcode);
 static void finish_out (void);
+static void warn_and_close_file (char const* msg, int ifd);
+static int check_file_modes (int ifd);
+static bool file_sync_error (void);
+static void display_stats (void);
 
 int main (int argc, char **argv);
 static int (*work) (int infile, int outfile) = zip;	/* function to call */
 
-#if ! NO_DIR
 static void treat_dir (int fd, char *dir);
-#endif
+// Checks whether directory option is on
+static void try_treat_dir (int fd, char *dir);
 
 #define strequ(s1, s2) (strcmp((s1),(s2)) == 0)
 
@@ -686,7 +690,7 @@ main (int argc, char **argv)
       treat_files (argc, argv);
     }
   else
-    {				/* Standard input */
+    {
       treat_stdin ();
     }
   if (stdin_was_read && close (STDIN_FILENO) != 0)
@@ -843,7 +847,10 @@ static bool
 atdir_eq (char const *dir, ptrdiff_t dirlen)
 {
   if (dirlen == 0)
-    dir = &dot, dirlen = 1;
+  {
+    dir = &dot;
+    dirlen = 1;
+  }
   return memcmp (dfname, dir, dirlen) == 0 && !dfname[dirlen];
 }
 
@@ -867,9 +874,9 @@ atdir_set (char const *dir, ptrdiff_t dirlen)
   if (try_opening_directories && !atdir_eq (dir, dirlen))
     {
       if (0 <= dfd)
-	close (dfd);
+	       close (dfd);
       if (dirlen == 0)
-	dir = &dot, dirlen = 1;
+	     dir = &dot, dirlen = 1;
       memcpy (dfname, dir, dirlen);
       dfname[dirlen] = '\0';
       dfd = open (dfname, O_SEARCH | O_DIRECTORY);
@@ -901,66 +908,14 @@ treat_file (char *iname)
   /* If the input name is that of a directory, recurse or ignore: */
   if (S_ISDIR (istat.st_mode))
     {
-#if ! NO_DIR
-      if (recursive)
-	{
-	  treat_dir (ifd, iname);
-	  /* Warning: ifname is now garbage */
-	  return;
-	}
-#endif
-      close (ifd);
-      WARN ((stderr, "%s: %s is a directory -- ignored\n",
-	     program_name, ifname));
+      try_treat_dir (ifd, iname);
       return;
     }
 
-  if (!to_stdout)
-    {
-      if (!S_ISREG (istat.st_mode))
-	{
-	  WARN ((stderr,
-		 "%s: %s is not a directory or a regular file - ignored\n",
-		 program_name, ifname));
-	  close (ifd);
-	  return;
-	}
-      if (istat.st_mode & S_ISUID)
-	{
-	  WARN ((stderr, "%s: %s is set-user-ID on execution - ignored\n",
-		 program_name, ifname));
-	  close (ifd);
-	  return;
-	}
-      if (istat.st_mode & S_ISGID)
-	{
-	  WARN ((stderr, "%s: %s is set-group-ID on execution - ignored\n",
-		 program_name, ifname));
-	  close (ifd);
-	  return;
-	}
-
-      if (!force)
-	{
-	  if (istat.st_mode & S_ISVTX)
-	    {
-	      WARN ((stderr,
-		     "%s: %s has the sticky bit set - file ignored\n",
-		     program_name, ifname));
-	      close (ifd);
-	      return;
-	    }
-	  if (2 <= istat.st_nlink)
-	    {
-	      WARN ((stderr, "%s: %s has %lu other link%c -- unchanged\n",
-		     program_name, ifname,
-		     (unsigned long int) istat.st_nlink - 1,
-		     istat.st_nlink == 2 ? ' ' : 's'));
-	      close (ifd);
-	      return;
-	    }
-	}
-    }
+  if (check_file_modes (ifd) != OK)
+  {
+    return;
+  }
 
   get_input_size_and_time ();
 
@@ -970,7 +925,6 @@ treat_file (char *iname)
   if (to_stdout && !list && !test)
     {
       strcpy (ofname, "stdout");
-
     }
   else if (make_ofname () != OK)
     {
@@ -979,6 +933,7 @@ treat_file (char *iname)
     }
 
   clear_bufs ();		/* clear input and output buffers */
+  /* initialize the number of gzip streams detected in the file to 0 */
   part_nb = 0;
 
   if (decompress)
@@ -993,8 +948,8 @@ treat_file (char *iname)
   if (list)
     {
       do_list (ifd, method);
-      if (close (ifd) != 0)
-	read_error ();
+      if (close (ifd) != OK)
+	      read_error ();
       return;
     }
 
@@ -1010,13 +965,13 @@ treat_file (char *iname)
   else
     {
       if (create_outfile () != OK)
-	return;
+	      return;
 
       if (!decompress && save_orig_name && !verbose && !quiet)
-	{
-	  fprintf (stderr, "%s: %s compressed to %s\n",
-		   program_name, ifname, ofname);
-	}
+      	{
+      	  fprintf (stderr, "%s: %s compressed to %s\n",
+      		   program_name, ifname, ofname);
+      	}
     }
   /* Keep the name even if not truncated except with --no-name: */
   if (!save_orig_name)
@@ -1028,7 +983,7 @@ treat_file (char *iname)
     }
 
   /* Actually do the compression/decompression. zlib loops over zipped members
-     internally, so don't worry about that here.
+   * internally, so don't worry about that here.
    */
   if ((*work) (ifd, ofd) != OK)
     {
@@ -1044,65 +999,51 @@ treat_file (char *iname)
     {
       copy_stat (&istat);
 
-      if ((synchronous
-	   && ((0 <= dfd && fdatasync (dfd) != 0 && errno != EINVAL)
-	       || (fsync (ofd) != 0 && errno != EINVAL))) || close (ofd) != 0)
-	write_error ();
+      if (file_sync_error () || close (ofd) != 0)
+	        write_error ();
 
       if (!keep)
-	{
-	  sigset_t oldset;
-	  int unlink_errno;
-	  char *ifbase = last_component (ifname);
-	  int ufd = atdir_eq (ifname, ifbase - ifname) ? dfd : -1;
-	  int res;
+      	{
+      	  sigset_t oldset;
+      	  int unlink_errno;
+      	  char *ifbase = last_component (ifname);
+          /* if the path to the file is equal to the directory file name,
+           * ufd = dfd
+           */
+      	  int ufd = atdir_eq (ifname, ifbase - ifname) ? dfd : -1;
+      	  int res;
 
-	  sigprocmask (SIG_BLOCK, &caught_signals, &oldset);
-	  remove_ofname_fd = -1;
-	  res = ufd < 0 ? xunlink (ifname) : unlinkat (ufd, ifbase, 0);
-	  unlink_errno = res == 0 ? 0 : errno;
-	  sigprocmask (SIG_SETMASK, &oldset, NULL);
+          /* temporarily block signals that we usually catch */
+      	  sigprocmask (SIG_BLOCK, &caught_signals, &oldset);
+      	  remove_ofname_fd = -1;
+      	  res = ufd < 0 ? xunlink (ifname) : unlinkat (ufd, ifbase, 0);
+      	  unlink_errno = res == 0 ? 0 : errno;
+          /* restore catching of signals */
+      	  sigprocmask (SIG_SETMASK, &oldset, NULL);
 
-	  if (unlink_errno)
-	    {
-	      WARN ((stderr, "%s: ", program_name));
-	      if (!quiet)
-		{
-		  errno = unlink_errno;
-		  perror (ifname);
-		}
-	    }
-	}
+      	  if (unlink_errno)
+      	    {
+      	      WARN ((stderr, "%s: ", program_name));
+      	      if (!quiet)
+            		{
+            		  errno = unlink_errno;
+            		  perror (ifname);
+            		}
+      	    }
+      	}
     }
 
   if (method == -1)
     {
       if (!to_stdout)
-	remove_output_file (false);
+	       remove_output_file (false);
       return;
     }
 
   /* Display statistics */
   if (verbose)
     {
-      if (test)
-	{
-	  fprintf (stderr, " OK");
-	}
-      else if (decompress)
-	{
-	  display_ratio (bytes_out - (bytes_in - header_bytes), bytes_out,
-			 stderr);
-	}
-      else
-	{
-	  display_ratio (bytes_in - (bytes_out - header_bytes), bytes_in,
-			 stderr);
-	}
-      if (!test && !to_stdout)
-	fprintf (stderr, " -- %s %s", keep ? "created" : "replaced with",
-		 ofname);
-      fprintf (stderr, "\n");
+      display_stats ();
     }
 }
 
@@ -2291,28 +2232,45 @@ static void
 install_signal_handlers (void)
 {
   int nsigs = sizeof handled_sig / sizeof handled_sig[0];
-  int i;
   struct sigaction act;
 
   sigemptyset (&caught_signals);
-  for (i = 0; i < nsigs; i++)
+  for (int i = 0; i < nsigs; i++)
     {
+      /* read the current signal handling behavior into act */
       sigaction (handled_sig[i], NULL, &act);
+
+      /* if we do not ignore the signal, then we must catch it. */
       if (act.sa_handler != SIG_IGN)
-	sigaddset (&caught_signals, handled_sig[i]);
+	       sigaddset (&caught_signals, handled_sig[i]);
     }
 
   act.sa_handler = abort_gzip_signal;
   act.sa_mask = caught_signals;
   act.sa_flags = 0;
 
-  for (i = 0; i < nsigs; i++)
+  for (int i = 0; i < nsigs; i++)
     if (sigismember (&caught_signals, handled_sig[i]))
       {
-	if (i == 0)
-	  foreground = 1;
-	sigaction (handled_sig[i], &act, NULL);
+        /* if sigint is a member of caught signals */
+      	if (i == 0)
+      	  foreground = 1;
+      	sigaction (handled_sig[i], &act, NULL);
       }
+}
+
+static void
+try_treat_dir (int fd, char *dir)
+{
+  if (recursive)
+    {
+      treat_dir (fd, dir);
+      /* Warning: ifname is now garbage */
+      return;
+    }
+  close (fd);
+  WARN ((stderr, "%s: %s is a directory -- ignored\n",
+   program_name, ifname));
 }
 
 /* ========================================================================
@@ -2394,4 +2352,87 @@ abort_gzip_signal (int sig)
     _exit (WARNING);
   signal (sig, SIG_DFL);
   raise (sig);
+}
+
+static void
+warn_and_close_file (char const* msg, int ifd)
+{
+  WARN ((stderr, msg, program_name, ifname));
+  close (ifd);
+}
+
+static int
+check_file_modes (int ifd)
+{
+  if (!to_stdout)
+    {
+      if (!S_ISREG (istat.st_mode))
+      	{
+          warn_and_close_file ("%s: %s is not a directory or a regular file - ignored\n", ifd);
+      	  return -1;
+      	}
+      if (istat.st_mode & S_ISUID)
+      	{
+          warn_and_close_file ("%s: %s is set-user-ID on execution - ignored\n", ifd);
+      	  return -1;
+      	}
+      if (istat.st_mode & S_ISGID)
+      	{
+      	  warn_and_close_file ("%s: %s is set-group-ID on execution - ignored\n", ifd);
+      	  return -1;
+      	}
+
+      if (!force)
+      	{
+      	  if (istat.st_mode & S_ISVTX)
+      	    {
+              warn_and_close_file ("%s: %s has the sticky bit set - file ignored\n", ifd);
+      	      return -1;
+      	    }
+      	  if (2 <= istat.st_nlink)
+      	    {
+      	      WARN ((stderr, "%s: %s has %lu other link%c -- unchanged\n",
+      		     program_name, ifname,
+      		     (unsigned long int) istat.st_nlink - 1,
+      		     istat.st_nlink == 2 ? ' ' : 's'));
+      	      close (ifd);
+      	      return -1;
+      	    }
+      	}
+    }
+    return 0;
+}
+
+static bool
+file_sync_error (void)
+{
+  return (synchronous && ((0 <= dfd && fdatasync (dfd) != 0 && errno != EINVAL)
+          || (fsync (ofd) != 0 && errno != EINVAL)));
+}
+
+static void
+display_stats (void)
+{
+  if (test)
+    {
+      fprintf (stderr, " OK");
+    }
+  else if (decompress)
+    {
+      int bytes_gained = bytes_out - (bytes_in - header_bytes);
+      display_ratio (bytes_gained, bytes_out,
+         stderr);
+    }
+  else
+    {
+      int bytes_shed = bytes_in - (bytes_out - header_bytes);
+      display_ratio (bytes_shed, bytes_in,
+         stderr);
+    }
+  if (!test && !to_stdout)
+  {
+    fprintf (stderr, " -- %s %s", keep ? "created" : "replaced with",
+       ofname);
+  }
+  fprintf (stderr, "\n");
 }

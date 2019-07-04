@@ -31,8 +31,9 @@ gzip_LDADD = libver.a ../lib/zlib/libz.a ../lib/libgzip.a
 gzip_LDADD += $(LIB_CLOCK_GETTIME)
 
 bin_PROGRAMS = gzip
-gzip_SOURCES = \
-  gzip.c unzip.c util.c parallel.c zip.c
+gzip_SOURCES = trees.c bits.c \
+  gzip.c unzip.c util/util.c util/buffer.c \
+	util/job.c parallel.c util/thread.c zip.c 
 
 if IBM_Z_DFLTCC
 gzip_SOURCES += dfltcc.c

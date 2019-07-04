@@ -27,7 +27,6 @@
 #include <stdlib.h>
 #include <errno.h>
 
-#include "tailor.h"
 #include "gzip.h"
 #include <dirname.h>
 #include <xalloc.h>

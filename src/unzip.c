@@ -30,7 +30,6 @@
 
 #include <config.h>
 #include <assert.h>
-#include "tailor.h"
 #include "gzip.h"
 #include "zlib.h"
 #include <sys/types.h>

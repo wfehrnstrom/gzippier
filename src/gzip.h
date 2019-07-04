@@ -19,6 +19,9 @@
    along with this program; if not, write to the Free Software Foundation,
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.  */
 
+#ifndef GZIP_H
+#define GZIP_H
+
 #ifdef __STDC__
   typedef void *voidp;
 #else
@@ -41,6 +44,8 @@
 #include <string.h>
 #include <stdnoreturn.h>
 #include <stdbool.h>
+#include <config.h>
+
 #define memzero(s, n) memset ((voidp)(s), 0, (n))
 
 typedef unsigned char  uch;
@@ -383,7 +388,7 @@ extern noreturn void write_error   (void);
 extern void display_ratio (off_t num, off_t den, FILE *file);
 extern void fprint_off    (FILE *, off_t, int);
 
-        /* in inflate.c */
+        /* in unzip.c */
 extern int inflateGZIP (void);
 extern int inflatePKZIP (void);
 
@@ -395,3 +400,5 @@ extern int dfltcc_inflate (void);
 
         /* in parallel.c */
 extern off_t parallel_zip (int pack_level);
+
+#endif

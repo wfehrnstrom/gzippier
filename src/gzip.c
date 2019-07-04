@@ -71,7 +71,6 @@ static char const *const license_msg[] = {
 // GNU LIB Headers
 
 #include "intprops.h"
-#include "tailor.h"
 #include "timespec.h"
 
 #include "dirname.h"

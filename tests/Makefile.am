@@ -20,11 +20,12 @@ TESTS =					\
   hufts					\
   keep					\
   list					\
+  memcpy-abuse	\
   null-suffix-clobber			\
   parallel 				\
+  pkzip 				\
 	trailing-nul		\
 	mixed			\
-	memcpy-abuse	\
   reproducible				\
   stdin					\
   timestamp				\

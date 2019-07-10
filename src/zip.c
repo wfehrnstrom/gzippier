@@ -21,7 +21,6 @@
 #include <config.h>
 #include <ctype.h>
 #include <assert.h>
-#include "tailor.h"
 #include "gzip.h"
 #include "zlib.h"
 #include <sys/types.h>
@@ -43,7 +42,7 @@ deflateGZIP (int pack_level)
   if (threads > 0) {
     return parallel_zip(pack_level);
   }
-  
+
     // source is input file descriptor, dest is input file descriptor
     int ret, flush;
     unsigned writtenOutBytes;
@@ -85,12 +84,12 @@ deflateGZIP (int pack_level)
           }
         if (rsync == true)
           {
-            // Very unsure about effectiveness of Z_FULL_FLUSH for rsyncabl
-            flush = (strm.avail_in != CHUNK) ? Z_FINISH : Z_FULL_FLUSH;
+            // Very unsure about effectiveness of Z_FULL_FLUSH for rsyncable
+            flush = (strm.avail_in == 0) ? Z_FINISH : Z_FULL_FLUSH;
           }
         else
           {
-            flush = (strm.avail_in != CHUNK) ? Z_FINISH : Z_NO_FLUSH;
+            flush = (strm.avail_in == 0) ? Z_FINISH : Z_NO_FLUSH;
           }
         strm.next_in = in;
 

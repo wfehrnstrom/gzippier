@@ -17,9 +17,9 @@
 
 CLEANFILES =
 BUILT_SOURCES =
-DEBUG_FLAGS = -g -O0
+DEBUG_FLAGS = -g3 -O0
 AM_CPPFLAGS = -I$(top_srcdir)/lib/zlib
-AM_CFLAGS = $(WARN_CFLAGS) $(WERROR_CFLAGS) $(DEBUG_FLAGS)
+AM_CFLAGS = $(DEBUG_FLAGS) $(WARN_CFLAGS) $(WERROR_CFLAGS)
 
 # Tell the linker to omit references to unused shared libraries.
 AM_LDFLAGS = $(IGNORE_USED_LIBRARIES_CFLAGS) -pthread
@@ -31,8 +31,9 @@ gzip_LDADD = libver.a ../lib/zlib/libz.a ../lib/libgzip.a
 gzip_LDADD += $(LIB_CLOCK_GETTIME)
 
 bin_PROGRAMS = gzip
-gzip_SOURCES = \
-  bits.c gzip.c trees.c unpack.c unzip.c util.c parallel.c zip.c
+gzip_SOURCES = trees.c bits.c \
+  gzip.c unzip.c util/util.c util/buffer.c \
+	util/job.c parallel.c util/thread.c zip.c 
 
 if IBM_Z_DFLTCC
 gzip_SOURCES += dfltcc.c

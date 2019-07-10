@@ -1,18 +1,14 @@
 /* bits.c -- output variable-length bit strings
-
    Copyright (C) 1999, 2009-2019 Free Software Foundation, Inc.
    Copyright (C) 1992-1993 Jean-loup Gailly
-
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 3, or (at your option)
    any later version.
-
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software Foundation,
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.  */
@@ -65,18 +61,17 @@
  */
 
 #include <config.h>
-#include "tailor.h"
 #include "gzip.h"
 
 #ifdef DEBUG
-#include <stdio.h>
+# include <stdio.h>
 #endif
 
 /* ===========================================================================
  * Local data used by the "bit string" routines.
  */
 
-static file_t zfile;		/* output gzip file */
+static file_t zfile; /* output gzip file */
 
 unsigned short bi_buf;
 /* Output buffer. bits are inserted starting at the bottom (least significant
@@ -97,7 +92,7 @@ int (*read_buf) (char *buf, unsigned size);
 /* Current input function. Set to mem_read for in-memory compression */
 
 #ifdef DEBUG
-off_t bits_sent;		/* bit length of the compressed data */
+  off_t bits_sent;   /* bit length of the compressed data */
 #endif
 
 /* ===========================================================================
@@ -106,7 +101,7 @@ off_t bits_sent;		/* bit length of the compressed data */
 void
 bi_init (file_t zipfile)
 {
-  zfile = zipfile;
+  zfile  = zipfile;
   bi_buf = 0;
   bi_valid = 0;
 #ifdef DEBUG
@@ -117,7 +112,7 @@ bi_init (file_t zipfile)
    * for in-memory compression.
    */
   if (zfile != NO_FILE)
-    read_buf = file_read;
+    read_buf  = file_read;
 }
 
 /* ===========================================================================
@@ -128,19 +123,19 @@ void
 send_bits (int value, int length)
 {
 #ifdef DEBUG
-  Tracev ((stderr, " l %2d v %4x ", length, value));
+  Tracev ((stderr," l %2d v %4x ", length, value));
   Assert (length > 0 && length <= 15, "invalid length");
-  bits_sent += (off_t) length;
+  bits_sent += (off_t)length;
 #endif
   /* If not enough room in bi_buf, use (valid) bits from bi_buf and
    * (16 - bi_valid) bits from value, leaving (width - (16-bi_valid))
    * unused bits in value.
    */
-  if (bi_valid > (int) Buf_size - length)
+  if (bi_valid > (int)Buf_size - length)
     {
       bi_buf |= (value << bi_valid);
       put_short (bi_buf);
-      bi_buf = (ush) value >> (Buf_size - bi_valid);
+      bi_buf = (ush)value >> (Buf_size - bi_valid);
       bi_valid += length - Buf_size;
     }
   else
@@ -185,7 +180,7 @@ bi_windup (void)
   bi_buf = 0;
   bi_valid = 0;
 #ifdef DEBUG
-  bits_sent = (bits_sent + 7) & ~7;
+  bits_sent = (bits_sent+7) & ~7;
 #endif
 }
 
@@ -197,18 +192,18 @@ bi_windup (void)
 void
 copy_block (char *buf, unsigned len, int header)
 {
-  bi_windup ();			/* align on byte boundary */
+  bi_windup ();              /* align on byte boundary */
 
   if (header)
     {
-      put_short ((ush) len);
-      put_short ((ush) ~ len);
+      put_short ((ush)len);
+      put_short ((ush)~len);
 #ifdef DEBUG
-      bits_sent += 2 * 16;
+      bits_sent += 2*16;
 #endif
     }
 #ifdef DEBUG
-  bits_sent += (off_t) len << 3;
+  bits_sent += (off_t)len<<3;
 #endif
   while (len--)
     put_byte (*buf++);

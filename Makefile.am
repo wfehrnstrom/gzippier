@@ -104,10 +104,10 @@ check-local: $(FILES_TO_CHECK) $(bin_PROGRAMS) gzip.doc.gz
 	$(AM_V_at)$(new_path); zgrep -iV >/dev/null
 	$(AM_V_at)$(new_path);				\
 	for opt in --rsyncable '' -1 -9; do		\
-						for file in $(FILES_TO_CHECK); do		\
+			for file in $(FILES_TO_CHECK); do		\
 			        gzip $$opt -c -- "$$file"			\
 			          | gzip -d | cmp - "$$file" || exit 1;	\
-			      done;						\
+			done;						\
 	done
 	$(AM_V_GEN)$(new_path)
 

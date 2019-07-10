@@ -19,6 +19,9 @@
    along with this program; if not, write to the Free Software Foundation,
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.  */
 
+#ifndef GZIP_H
+#define GZIP_H
+
 #ifdef __STDC__
   typedef void *voidp;
 #else
@@ -36,10 +39,13 @@
  */
 #include <stdio.h>
 #include <sys/types.h> /* for off_t */
+#include <stdint.h>
 #include <time.h>
 #include <string.h>
 #include <stdnoreturn.h>
 #include <stdbool.h>
+#include <config.h>
+
 #define memzero(s, n) memset ((voidp)(s), 0, (n))
 
 typedef unsigned char  uch;
@@ -198,15 +204,73 @@ typedef int file_t;     /* Do not use stdio */
 #define CHUNK 16384
 /* zlib deflate and inflate chunk size. See zlib docs for more details */
 
+/* Common defaults */
+#ifndef OS_CODE
+#  define OS_CODE  0x03  /* assume Unix */
+#endif
+
+#ifndef SIGPIPE
+# define SIGPIPE 0
+#endif
+
+#ifndef casemap
+#  define casemap(c) (c)
+#endif
+
+#ifndef OPTIONS_VAR
+#  define OPTIONS_VAR "GZIP"
+#endif
+
+#ifndef Z_SUFFIX
+#  define Z_SUFFIX ".gz"
+#endif
+
+#ifdef MAX_EXT_CHARS
+#  define MAX_SUFFIX  MAX_EXT_CHARS
+#else
+#  define MAX_SUFFIX  30
+#endif
+
+#ifndef MAKE_LEGAL_NAME
+#  ifdef NO_MULTIPLE_DOTS
+#    define MAKE_LEGAL_NAME(name)   make_simple_name(name)
+#  else
+#    define MAKE_LEGAL_NAME(name)
+#  endif
+#endif
+
+#ifndef MIN_PART
+#  define MIN_PART 3
+   /* keep at least MIN_PART chars between dots in a file name. */
+#endif
+
+#ifndef EXPAND
+#  define EXPAND(argc,argv)
+#endif
+
+#ifndef SET_BINARY_MODE
+#  define SET_BINARY_MODE(fd)
+#endif
+
+// try to get rid of it.
+
+#ifndef FALLTHROUGH
+# if __GNUC__ < 7
+#  define FALLTHROUGH ((void) 0)
+# else
+#  define FALLTHROUGH __attribute__ ((__fallthrough__))
+# endif
+#endif
+
 extern int exit_code;      /* program exit code */
 extern int verbose;        /* be verbose (-v) */
 extern int quiet;          /* be quiet (-q) */
-extern int level;          /* compression level */
+extern uint8_t level;          /* compression level */
 extern int test;           /* check .z file integrity */
 extern int to_stdout;      /* output to stdout (-c) */
 extern int save_orig_name; /* set if original name must be saved */
 extern int no_name;        /* original name should not be restored */
-extern int pkzip;          /* global variable for pkzip */ 
+extern int pkzip;          /* global variable for pkzip */
 
 #define get_byte()  (inptr < insize ? inbuf[inptr++] : fill_inbuf(false, CHUNK))
 #define try_byte()  (inptr < insize ? inbuf[inptr++] : fill_inbuf(true, CHUNK))
@@ -324,7 +388,7 @@ extern noreturn void write_error   (void);
 extern void display_ratio (off_t num, off_t den, FILE *file);
 extern void fprint_off    (FILE *, off_t, int);
 
-        /* in inflate.c */
+        /* in unzip.c */
 extern int inflateGZIP (void);
 extern int inflatePKZIP (void);
 
@@ -336,3 +400,5 @@ extern int dfltcc_inflate (void);
 
         /* in parallel.c */
 extern off_t parallel_zip (int pack_level);
+
+#endif
